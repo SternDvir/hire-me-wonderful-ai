@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model ScreeningSession {
+  id                  String   @id @default(uuid()) @db.Uuid
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdBy           String   @map("created_by") @db.VarChar(255)
+  config              Json
+  status              String   @db.VarChar(50) // pending, processing, completed, failed
+  totalCandidates     Int      @default(0) @map("total_candidates")
+  candidatesProcessed Int      @default(0) @map("candidates_processed")
+  passedCandidates    Int      @default(0) @map("passed_candidates")
+  rejectedCandidates  Int      @default(0) @map("rejected_candidates")
+  erroredCandidates   Int      @default(0) @map("errored_candidates")
+  totalCost           Decimal? @default(0) @map("total_cost") @db.Decimal(10, 4)
+  tavilyCost          Decimal? @default(0) @map("tavily_cost") @db.Decimal(10, 4)
+  aiCost              Decimal? @default(0) @map("ai_cost") @db.Decimal(10, 4)
+  startedAt           DateTime? @map("started_at") @db.Timestamptz
+  completedAt         DateTime? @map("completed_at") @db.Timestamptz
+  totalProcessingTimeMs BigInt? @map("total_processing_time_ms")
+  countryId           String?  @map("country_id") @db.Uuid
+
+  evaluations CandidateEvaluation[]
+  errors      SessionError[]
+  country     Country? @relation(fields: [countryId], references: [id])
+
+  @@index([createdAt(sort: Desc)])
+  @@index([createdBy])
+  @@index([status])
+  @@map("screening_sessions")
+}
+
+model Country {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  sessions ScreeningSession[]
+
+  @@map("countries")
+}
+
+model CandidateEvaluation {
+  id                          String   @id @default(uuid()) @db.Uuid
+  screeningSessionId          String   @map("screening_session_id") @db.Uuid
+  candidateId                 String   @map("candidate_id") @db.VarChar(255)
+  linkedinUrl                 String   @map("linkedin_url") @db.VarChar(500)
+  fullName                    String   @map("full_name") @db.VarChar(255)
+  currentTitle                String?  @map("current_title") @db.VarChar(255)
+  currentCompany              String?  @map("current_company") @db.VarChar(255)
+  location                    String?  @db.VarChar(255)
+  
+  profileData                 Json     @map("profile_data")
+  enrichedCompanies           Json?    @map("enriched_companies")
+  
+  experienceEvaluation        Json?    @map("experience_evaluation")
+  leadershipEvaluation        Json?    @map("leadership_evaluation")
+  languageCheck               Json?    @map("language_check")
+  companyBackgroundEvaluation Json?    @map("company_background_evaluation")
+  bonusFactors                Json?    @map("bonus_factors")
+  
+  finalDecision               Json?    @map("final_decision")
+  decisionResult              String?  @map("decision_result") @db.VarChar(10) // PENDING, PASS, REJECT
+  overallScore                Int?     @map("overall_score")
+  
+  evaluatedAt                 DateTime? @map("evaluated_at") @db.Timestamptz
+  evaluationCost              Decimal?  @map("evaluation_cost") @db.Decimal(10, 4)
+  processingTimeMs            Int?      @map("processing_time_ms")
+  
+  manualOverride              Json?    @map("manual_override")
+
+  session ScreeningSession @relation(fields: [screeningSessionId], references: [id], onDelete: Cascade)
+
+  @@index([screeningSessionId])
+  @@index([decisionResult])
+  @@index([overallScore(sort: Desc)])
+  @@index([evaluatedAt(sort: Desc)])
+  @@index([linkedinUrl])
+  @@unique([screeningSessionId, linkedinUrl])
+  @@map("candidate_evaluations")
+}
+
+model CompanyCache {
+  id                    String   @id @default(uuid()) @db.Uuid
+  companyName           String   @map("company_name") @db.VarChar(255)
+  companyNameNormalized String   @map("company_name_normalized") @db.VarChar(255)
+  enrichedData          Json     @map("enriched_data")
+  searchedAt            DateTime @default(now()) @map("searched_at") @db.Timestamptz
+  cacheExpiresAt        DateTime @default(dbgenerated("NOW() + INTERVAL '30 days'")) @map("cache_expires_at") @db.Timestamptz
+
+  @@index([companyNameNormalized])
+  @@index([cacheExpiresAt])
+  @@map("company_cache")
+}
+
+model SessionError {
+  id                 String   @id @default(uuid()) @db.Uuid
+  screeningSessionId String   @map("screening_session_id") @db.Uuid
+  candidateId        String?  @map("candidate_id") @db.VarChar(255)
+  errorMessage       String   @map("error_message") @db.Text
+  errorStack         String?  @map("error_stack") @db.Text
+  occurredAt         DateTime @default(now()) @map("occurred_at") @db.Timestamptz
+
+  session ScreeningSession @relation(fields: [screeningSessionId], references: [id], onDelete: Cascade)
+
+  @@index([screeningSessionId])
+  @@index([occurredAt(sort: Desc)])
+  @@map("session_errors")
+}

@@ -1,0 +1,100 @@
+[
+  {
+    "linkedinUrl": "https://www.linkedin.com/in/strong-candidate",
+    "fullName": "Alice Techlead",
+    "headline": "CTO at TechStartup | Ex-Google | AI Enthusiast",
+    "addressCountryOnly": "United States",
+    "about": "Experienced CTO with a passion for building scalable AI solutions. 10+ years in software engineering, 5 years in leadership. Love building teams and shipping products.",
+    "jobTitle": "Chief Technology Officer",
+    "companyName": "TechStartup AI",
+    "experiences": [
+      {
+        "title": "Chief Technology Officer",
+        "companyName": "TechStartup AI",
+        "jobStartedOn": "2020-01",
+        "jobDescription": "Leading the engineering team, building AI-powered CRM. Grew team from 5 to 50."
+      },
+      {
+        "title": "Senior Software Engineer",
+        "companyName": "Google",
+        "jobStartedOn": "2015-01",
+        "jobEndedOn": "2019-12",
+        "jobDescription": "Worked on Google Cloud AI platform. Backend development in Go and Python."
+      }
+    ],
+    "educations": [
+      {
+        "degreeName": "Master of Science",
+        "fieldOfStudy": "Computer Science",
+        "schoolName": "Stanford University"
+      }
+    ],
+    "skills": [
+      { "name": "Artificial Intelligence" },
+      { "name": "Machine Learning" },
+      { "name": "Python" },
+      { "name": "Team Leadership" },
+      { "name": "Cloud Computing" }
+    ],
+    "languages": [
+      { "name": "English", "proficiency": "Native or bilingual proficiency" }
+    ]
+  },
+  {
+    "linkedinUrl": "https://www.linkedin.com/in/weak-candidate",
+    "fullName": "Bob Junior",
+    "headline": "Junior Developer looking for opportunities",
+    "addressCountryOnly": "United Kingdom",
+    "about": "Recent graduate looking for frontend roles.",
+    "jobTitle": "Junior Frontend Developer",
+    "companyName": "WebAgency",
+    "experiences": [
+      {
+        "title": "Junior Frontend Developer",
+        "companyName": "WebAgency",
+        "jobStartedOn": "2023-01",
+        "jobDescription": "Building websites using React and Tailwind."
+      }
+    ],
+    "educations": [
+      {
+        "degreeName": "Bachelor of Arts",
+        "fieldOfStudy": "Graphic Design",
+        "schoolName": "University of Arts"
+      }
+    ],
+    "skills": [
+      { "name": "React" },
+      { "name": "CSS" },
+      { "name": "HTML" }
+    ],
+    "languages": [
+      { "name": "English", "proficiency": "Native or bilingual proficiency" }
+    ]
+  },
+  {
+    "linkedinUrl": "https://www.linkedin.com/in/edge-case-candidate",
+    "fullName": "Charlie Foreign",
+    "headline": "Senior Backend Engineer",
+    "addressCountryOnly": "France",
+    "about": "Backend engineer with 8 years experience. Focus on distributed systems.",
+    "jobTitle": "Senior Engineer",
+    "companyName": "FrenchTech",
+    "experiences": [
+      {
+        "title": "Senior Engineer",
+        "companyName": "FrenchTech",
+        "jobStartedOn": "2018-01",
+        "jobDescription": "Backend development."
+      }
+    ],
+    "educations": [],
+    "skills": [
+      { "name": "Java" },
+      { "name": "Spring Boot" }
+    ],
+    "languages": [
+      { "name": "French", "proficiency": "Native or bilingual proficiency" }
+    ]
+  }
+]

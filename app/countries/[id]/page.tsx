@@ -70,9 +70,13 @@ export default function CountryDetailPage() {
   const [filterDateTo, setFilterDateTo] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  // Pagination states
+  // Pagination states for candidates
   const [currentPage, setCurrentPage] = useState(1);
   const candidatesPerPage = 50;
+
+  // Pagination states for sessions
+  const [sessionsPage, setSessionsPage] = useState(1);
+  const sessionsPerPage = 5;
 
   useEffect(() => {
     fetchCountryData();
@@ -291,7 +295,9 @@ export default function CountryDetailPage() {
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Screening Sessions</h2>
             <div className="bg-card-light dark:bg-card-dark backdrop-blur-sm rounded-wonderful-xl shadow-wonderful-lg dark:shadow-wonderful-xl border border-white/20 dark:border-gray-800/50 overflow-hidden">
               <div className="grid gap-4 p-4">
-                {sessions.map((session) => (
+                {sessions
+                  .slice((sessionsPage - 1) * sessionsPerPage, sessionsPage * sessionsPerPage)
+                  .map((session) => (
                   <Link
                     key={session.id}
                     href={`/screenings/${session.id}`}
@@ -301,7 +307,14 @@ export default function CountryDetailPage() {
                       <Calendar className="w-5 h-5 text-wonderful-purple-600 dark:text-wonderful-purple-400" />
                       <div>
                         <div className="font-semibold text-gray-900 dark:text-white">
-                          {new Date(session.createdAt).toLocaleDateString()}
+                          {new Date(session.createdAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })} at {new Date(session.createdAt).toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">
                           {session.totalCandidates} candidates • {session.passedCandidates} passed • {session.rejectedCandidates} rejected
@@ -318,6 +331,28 @@ export default function CountryDetailPage() {
                   </Link>
                 ))}
               </div>
+              {/* Sessions Pagination */}
+              {sessions.length > sessionsPerPage && (
+                <div className="flex items-center justify-center space-x-4 p-4 border-t border-gray-100 dark:border-gray-800">
+                  <button
+                    onClick={() => setSessionsPage(p => Math.max(1, p - 1))}
+                    disabled={sessionsPage === 1}
+                    className="p-2 rounded-wonderful-lg bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    Page {sessionsPage} of {Math.ceil(sessions.length / sessionsPerPage)}
+                  </span>
+                  <button
+                    onClick={() => setSessionsPage(p => Math.min(Math.ceil(sessions.length / sessionsPerPage), p + 1))}
+                    disabled={sessionsPage >= Math.ceil(sessions.length / sessionsPerPage)}
+                    className="p-2 rounded-wonderful-lg bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

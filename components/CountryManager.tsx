@@ -72,24 +72,27 @@ export function CountryManager() {
 
   if (loading) {
     return (
-      <div className="bg-card-light dark:bg-card-dark backdrop-blur-sm p-6 rounded-wonderful-xl shadow-wonderful-lg border border-white/20 dark:border-gray-800/50">
+      <>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center space-x-2">
           <Globe className="w-6 h-6 text-wonderful-purple-600" />
           <span>Countries</span>
         </h2>
-        <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-wonderful-purple-600"></div>
+        <div className="bg-card-light dark:bg-card-dark backdrop-blur-sm p-6 rounded-wonderful-xl shadow-wonderful-lg border border-white/20 dark:border-gray-800/50 flex-1">
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-wonderful-purple-600"></div>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="bg-card-light dark:bg-card-dark backdrop-blur-sm p-6 rounded-wonderful-xl shadow-wonderful-lg border border-white/20 dark:border-gray-800/50">
+    <>
       <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center space-x-2">
         <Globe className="w-6 h-6 text-wonderful-purple-600" />
         <span>Countries</span>
       </h2>
+      <div className="bg-card-light dark:bg-card-dark backdrop-blur-sm p-6 rounded-wonderful-xl shadow-wonderful-lg border border-white/20 dark:border-gray-800/50 flex-1">
 
       {/* Add Country Form */}
       <div className="flex gap-3 mb-6">
@@ -145,6 +148,7 @@ export function CountryManager() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

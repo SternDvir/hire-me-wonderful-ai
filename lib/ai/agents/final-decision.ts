@@ -4,15 +4,17 @@ import { EnrichedCompany } from "@/lib/schemas/company";
 import { FinalDecisionSchema, FinalDecision, LanguageCheck } from "@/lib/schemas/evaluation";
 import { zodResponseFormat } from "openai/helpers/zod";
 
-// Initialize OpenAI client pointing to OpenRouter
-const openai = new OpenAI({
-  baseURL: "https://openrouter.ai/api/v1",
-  apiKey: process.env.OPENROUTER_API_KEY,
-  defaultHeaders: {
-    "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-    "X-Title": "Hire Me Wonderful AI",
-  },
-});
+// Create OpenAI client lazily to ensure env vars are loaded
+function getOpenAIClient() {
+  return new OpenAI({
+    baseURL: "https://openrouter.ai/api/v1",
+    apiKey: process.env.OPENROUTER_API_KEY,
+    defaultHeaders: {
+      "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+      "X-Title": "Hire Me Wonderful AI",
+    },
+  });
+}
 
 const SYSTEM_PROMPT = `
 You are an expert technical recruiter for Wonderful AI, evaluating candidates for LOCAL CTO positions.
@@ -116,6 +118,7 @@ export async function evaluateCandidate(
   };
 
   try {
+    const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
       model: "anthropic/claude-opus-4.5", // Using specific model as requested
       messages: [

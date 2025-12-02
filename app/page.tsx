@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { CountryManager } from "@/components/CountryManager";
 import { GradientOrbs } from "@/components/GradientOrbs";
-import { Users, CheckCircle2, TrendingUp, Calendar, ArrowRight } from "lucide-react";
+import { Users, CheckCircle2, TrendingUp, Calendar, ArrowRight, Globe } from "lucide-react";
 
 // Force dynamic rendering to ensure we get the latest sessions
 export const dynamic = 'force-dynamic';
@@ -12,7 +12,10 @@ export default async function Dashboard() {
   try {
     sessions = await prisma.screeningSession.findMany({
       orderBy: { createdAt: "desc" },
-      take: 10
+      take: 10,
+      include: {
+        country: true
+      }
     });
   } catch (error) {
     console.error("Failed to fetch sessions:", error);
@@ -49,44 +52,41 @@ export default async function Dashboard() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <div className="bg-card-light backdrop-blur-sm p-6 rounded-wonderful-xl shadow-wonderful-lg border border-white/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-gray-600 font-semibold mb-1 uppercase tracking-wide">Total Candidates</div>
-                <div className="text-4xl font-bold text-gray-900">{totalCandidates}</div>
-              </div>
-              <Users className="w-10 h-10 text-wonderful-purple-600 opacity-50" />
+            <div className="flex flex-col items-center text-center">
+              <Users className="w-10 h-10 text-wonderful-purple-600 opacity-50 mb-3" />
+              <div className="text-sm text-gray-600 font-semibold mb-1 uppercase tracking-wide">Total Candidates</div>
+              <div className="text-4xl font-bold text-gray-900">{totalCandidates}</div>
             </div>
           </div>
 
           <div className="bg-card-light backdrop-blur-sm p-6 rounded-wonderful-xl shadow-wonderful-lg border border-white/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-gray-600 font-semibold mb-1 uppercase tracking-wide">Passed</div>
-                <div className="text-4xl font-bold bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent">
-                  {passedCandidates}
-                </div>
+            <div className="flex flex-col items-center text-center">
+              <CheckCircle2 className="w-10 h-10 text-green-600 opacity-50 mb-3" />
+              <div className="text-sm text-gray-600 font-semibold mb-1 uppercase tracking-wide">Passed</div>
+              <div className="text-4xl font-bold bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent">
+                {passedCandidates}
               </div>
-              <CheckCircle2 className="w-10 h-10 text-green-600 opacity-50" />
             </div>
           </div>
 
           <div className="bg-card-light backdrop-blur-sm p-6 rounded-wonderful-xl shadow-wonderful-lg border border-white/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-gray-600 font-semibold mb-1 uppercase tracking-wide">Pass Rate</div>
-                <div className="text-4xl font-bold bg-text-accent bg-clip-text text-transparent">{passRate}%</div>
-              </div>
-              <TrendingUp className="w-10 h-10 text-wonderful-blue-600 opacity-50" />
+            <div className="flex flex-col items-center text-center">
+              <TrendingUp className="w-10 h-10 text-wonderful-blue-600 opacity-50 mb-3" />
+              <div className="text-sm text-gray-600 font-semibold mb-1 uppercase tracking-wide">Pass Rate</div>
+              <div className="text-4xl font-bold bg-text-accent bg-clip-text text-transparent">{passRate}%</div>
             </div>
           </div>
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           {/* Recent Screenings */}
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Screenings</h2>
-            <div className="bg-card-light backdrop-blur-sm rounded-wonderful-xl shadow-wonderful-lg border border-white/20 overflow-hidden">
+          <div className="h-full flex flex-col">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
+              <Calendar className="w-6 h-6 text-wonderful-purple-600" />
+              <span>Recent Screenings</span>
+            </h2>
+            <div className="bg-card-light backdrop-blur-sm rounded-wonderful-xl shadow-wonderful-lg border border-white/20 overflow-hidden flex-1">
               {sessions.length > 0 ? (
                 <div className="divide-y divide-gray-100">
                   {sessions.map((session) => (
@@ -105,10 +105,22 @@ export default async function Dashboard() {
                               month: 'short',
                               day: 'numeric',
                               year: 'numeric'
+                            })} at {new Date(session.createdAt).toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit'
                             })}
                           </div>
-                          <div className="text-sm text-gray-600">
-                            {session.totalCandidates} candidates
+                          <div className="text-sm text-gray-600 flex items-center space-x-2">
+                            <span>{session.totalCandidates} candidates</span>
+                            {session.country && (
+                              <>
+                                <span>•</span>
+                                <span className="flex items-center space-x-1">
+                                  <Globe className="w-3 h-3" />
+                                  <span>{session.country.name}</span>
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -142,7 +154,7 @@ export default async function Dashboard() {
           </div>
 
           {/* Country Manager */}
-          <div>
+          <div className="h-full flex flex-col">
             <CountryManager />
           </div>
         </div>

@@ -3,11 +3,18 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const countryId = searchParams.get("countryId");
+
     const sessions = await prisma.screeningSession.findMany({
+      where: countryId ? { countryId } : undefined,
       orderBy: { createdAt: "desc" },
-      take: 20
+      take: 20,
+      include: {
+        country: true
+      }
     });
-    
+
     return NextResponse.json(sessions);
   } catch (error) {
     console.error("Error fetching sessions:", error);

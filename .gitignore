@@ -41,3 +41,11 @@ next-env.d.ts
 
 # npm cache (should never be committed)
 .npm-cache/
+
+# Editor backup files
+*.swp
+*.swo
+*~
+
+# Generated test data artifacts
+session_details*.json

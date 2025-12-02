@@ -26,7 +26,9 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
+.env
 .env*.local
+.env.production
 
 # vercel
 .vercel
@@ -36,3 +38,6 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# npm cache (should never be committed)
+.npm-cache/

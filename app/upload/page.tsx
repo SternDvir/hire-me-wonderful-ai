@@ -2,15 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { GradientOrbs } from "@/components/GradientOrbs";
 import {
   Upload,
   Globe,
   FileJson,
   AlertCircle,
   CheckCircle2,
-  ArrowRight
+  ArrowRight,
+  Sparkles
 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -122,33 +123,33 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="relative min-h-screen">
-      <GradientOrbs variant="section" />
-
-      <div className="container mx-auto p-8 max-w-2xl relative">
+    <div className="page-gradient min-h-[calc(100vh-3.5rem)]">
+      <div className="max-w-2xl mx-auto px-6 py-10">
         {/* Header */}
-        <div className="mb-8 text-center">
-          <div className="w-16 h-16 bg-btn-primary rounded-wonderful-xl flex items-center justify-center shadow-md mx-auto mb-4">
-            <Upload className="w-8 h-8 text-white" />
+        <div className="text-center mb-10">
+          <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-4 shadow-glow">
+            <Sparkles className="w-7 h-7 text-accent" />
           </div>
-          <h1 className="text-5xl font-bold bg-text-primary bg-clip-text text-transparent mb-2">New Screening</h1>
-          <p className="text-lg text-gray-700 dark:text-gray-300">Upload your LinkedIn candidate data to start screening</p>
+          <h1 className="text-display text-text-primary">Upload Candidates</h1>
+          <p className="text-body text-text-secondary mt-2">
+            Upload a JSON file with LinkedIn profile data to start screening
+          </p>
         </div>
 
         {/* Main Card */}
-        <div className="bg-card-light dark:bg-card-dark backdrop-blur-sm rounded-wonderful-2xl shadow-wonderful-xl border border-white/20 dark:border-gray-800/50 p-8">
+        <div className="card p-6">
           {/* Country Selection */}
-          <div className="mb-8">
-            <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3 uppercase tracking-wide flex items-center space-x-2">
-              <Globe className="w-4 h-4 text-wonderful-purple-600" />
-              <span>Target Country (Optional)</span>
+          <div className="mb-6">
+            <label className="block text-small text-text-secondary mb-2 flex items-center gap-2">
+              <Globe className="w-4 h-4" />
+              Target Country (Optional)
             </label>
             <select
               value={selectedCountry}
               onChange={(e) => setSelectedCountry(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-wonderful-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-wonderful-purple-500 transition-all duration-200"
+              className="w-full h-11 px-4 bg-background-tertiary/50 border border-border rounded-lg text-body text-text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-all duration-150"
             >
-              <option value="">-- No Country --</option>
+              <option value="">No country selected</option>
               {countries.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -163,12 +164,12 @@ export default function UploadPage() {
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-wonderful-xl p-12 text-center transition-all duration-300 ${
+            className={`border-2 border-dashed rounded-xl p-10 text-center transition-all duration-200 ${
               dragActive
-                ? 'border-wonderful-purple-500 bg-wonderful-purple-50 dark:bg-wonderful-purple-900/20'
+                ? 'border-accent bg-accent-muted shadow-glow'
                 : file
-                  ? 'border-green-400 bg-green-50 dark:bg-green-900/20'
-                  : 'border-gray-300 dark:border-gray-700 hover:border-wonderful-purple-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                  ? 'border-success bg-success-muted shadow-glow-success'
+                  : 'border-border hover:border-border-focus hover:bg-background-tertiary/30'
             }`}
           >
             <input
@@ -180,32 +181,35 @@ export default function UploadPage() {
             />
 
             {file ? (
-              <div>
-                <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">File Selected</p>
-                <div className="flex items-center justify-center space-x-2 text-gray-600 dark:text-gray-400">
-                  <FileJson className="w-5 h-5" />
-                  <span>{file.name}</span>
+              <div className="animate-fade-in">
+                <div className="w-14 h-14 rounded-xl bg-success/10 flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle2 className="w-7 h-7 text-success-light" />
+                </div>
+                <p className="text-h3 text-text-primary mb-2">File Selected</p>
+                <div className="flex items-center justify-center gap-2 text-text-secondary mb-4">
+                  <FileJson className="w-4 h-4" />
+                  <span className="text-small font-mono">{file.name}</span>
                 </div>
                 <label
                   htmlFor="file-upload"
-                  className="cursor-pointer text-wonderful-purple-600 dark:text-wonderful-purple-400 hover:text-wonderful-purple-700 font-semibold mt-4 inline-block"
+                  className="cursor-pointer text-accent hover:text-accent-hover text-small font-medium transition-colors"
                 >
                   Choose a different file
                 </label>
               </div>
             ) : (
               <div>
-                <FileJson className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-                <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Drag and drop your JSON file here
+                <div className="w-14 h-14 rounded-xl bg-background-tertiary flex items-center justify-center mx-auto mb-4">
+                  <Upload className="w-7 h-7 text-text-tertiary" />
+                </div>
+                <p className="text-h3 text-text-primary mb-2">
+                  Drop JSON file here
                 </p>
-                <p className="text-gray-500 dark:text-gray-400 mb-4">or</p>
-                <label
-                  htmlFor="file-upload"
-                  className="cursor-pointer bg-wonderful-purple-100 dark:bg-wonderful-purple-900/30 text-wonderful-purple-700 dark:text-wonderful-purple-400 px-6 py-3 rounded-wonderful-lg font-semibold hover:bg-wonderful-purple-200 dark:hover:bg-wonderful-purple-900/50 transition-all duration-200 inline-block"
-                >
-                  Browse Files
+                <p className="text-small text-text-tertiary mb-5">or click to browse</p>
+                <label htmlFor="file-upload">
+                  <Button variant="secondary" size="md" className="cursor-pointer">
+                    Browse Files
+                  </Button>
                 </label>
               </div>
             )}
@@ -213,38 +217,36 @@ export default function UploadPage() {
 
           {/* Error Message */}
           {error && (
-            <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-wonderful-lg flex items-start space-x-3">
+            <div className="mt-5 p-4 bg-danger-muted border border-danger-border text-danger-light rounded-lg flex items-start gap-3 animate-slide-up">
               <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-              <span>{error}</span>
+              <span className="text-small">{error}</span>
             </div>
           )}
 
           {/* Upload Button */}
-          <button
+          <Button
             onClick={handleUpload}
             disabled={!file || uploading}
-            className="mt-8 w-full bg-btn-primary hover:bg-btn-primary-hover text-white py-4 rounded-wonderful-lg font-bold text-lg shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex justify-center items-center space-x-2"
+            fullWidth
+            size="lg"
+            className="mt-6"
+            loading={uploading}
           >
             {uploading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                <span>Processing...</span>
-              </>
+              'Processing...'
             ) : (
               <>
-                <span>Upload & Start Screening</span>
-                <ArrowRight className="w-5 h-5" />
+                Upload & Start Screening
+                <ArrowRight className="w-4 h-4" />
               </>
             )}
-          </button>
+          </Button>
         </div>
 
         {/* Help Text */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Upload a JSON file containing an array of LinkedIn profile data.
-          </p>
-        </div>
+        <p className="text-center text-small text-text-tertiary mt-6">
+          Upload a JSON file containing an array of LinkedIn profile data
+        </p>
       </div>
     </div>
   );

@@ -3,25 +3,104 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #0f0f12;
+  --foreground: #ececf1;
 }
 
 body {
-  color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--foreground);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Subtle gradient overlay for page backgrounds */
+.page-gradient {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -20%, rgba(94, 106, 210, 0.08), transparent),
+    linear-gradient(180deg, #0f0f12 0%, #12121a 100%);
+}
+
+/* Scrollbar styling - softer dark tones */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #16161a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) #16161a;
+}
+
+@layer base {
+  /* Smooth transitions for interactive elements */
+  a, button, input, select, textarea {
+    transition: all 0.15s ease;
+  }
+
+  /* Focus styles */
+  :focus-visible {
+    outline: 2px solid rgba(94, 106, 210, 0.5);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Card with subtle gradient */
+  .card {
+    @apply bg-background-secondary border border-border rounded-lg;
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0) 100%);
+  }
+
+  /* Card hover state */
+  .card-interactive {
+    @apply card cursor-pointer;
+    @apply hover:bg-background-tertiary hover:border-border-focus;
+    @apply transition-all duration-150;
+  }
+
+  /* Subtle glow effect for important elements */
+  .glow {
+    box-shadow: 0 0 30px rgba(94, 106, 210, 0.1);
+  }
+
+  /* Table styles */
+  .table-row {
+    @apply border-b border-border;
+    @apply hover:bg-background-tertiary/50;
+    @apply transition-colors duration-100;
+  }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Gradient text utility */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #ececf1 0%, #8e8ea0 100%);
+  }
+
+  /* Accent gradient text */
+  .text-gradient-accent {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #7c85e3 0%, #5e6ad2 100%);
   }
 }

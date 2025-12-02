@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Globe, Plus, Trash2, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
 interface Country {
   id: string;
@@ -72,83 +73,92 @@ export function CountryManager() {
 
   if (loading) {
     return (
-      <>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center space-x-2">
-          <Globe className="w-6 h-6 text-wonderful-purple-600" />
-          <span>Countries</span>
-        </h2>
-        <div className="bg-card-light dark:bg-card-dark backdrop-blur-sm p-6 rounded-wonderful-xl shadow-wonderful-lg border border-white/20 dark:border-gray-800/50 flex-1">
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-wonderful-purple-600"></div>
-          </div>
+      <div className="card overflow-hidden">
+        <div className="px-5 py-4 border-b border-border">
+          <h2 className="text-h2 text-text-primary flex items-center gap-2">
+            <Globe className="w-5 h-5 text-text-secondary" />
+            Countries
+          </h2>
         </div>
-      </>
+        <div className="flex justify-center py-16">
+          <div className="animate-spin rounded-full h-6 w-6 border-2 border-border border-t-accent"></div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <>
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center space-x-2">
-        <Globe className="w-6 h-6 text-wonderful-purple-600" />
-        <span>Countries</span>
-      </h2>
-      <div className="bg-card-light dark:bg-card-dark backdrop-blur-sm p-6 rounded-wonderful-xl shadow-wonderful-lg border border-white/20 dark:border-gray-800/50 flex-1">
-
-      {/* Add Country Form */}
-      <div className="flex gap-3 mb-6">
-        <input
-          type="text"
-          placeholder="Add new country..."
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-          className="flex-1 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-wonderful-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-wonderful-purple-500 transition-all duration-200 placeholder-gray-400"
-        />
-        <button
-          onClick={handleAdd}
-          disabled={adding || !newName}
-          className="bg-btn-primary hover:bg-btn-primary-hover text-white px-5 py-2.5 rounded-wonderful-lg font-semibold shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center space-x-2"
-        >
-          <Plus className="w-4 h-4" />
-          <span>{adding ? "Adding..." : "Add"}</span>
-        </button>
-      </div>
-
-      {/* Countries List */}
-      <div className="space-y-2">
-        {countries.map((country) => (
-          <Link
-            key={country.id}
-            href={`/countries/${country.id}`}
-            className="flex justify-between items-center p-4 bg-gray-50/50 dark:bg-gray-800/50 rounded-wonderful-lg hover:bg-gray-100/50 dark:hover:bg-gray-700/50 hover:shadow-wonderful-sm transition-all duration-200 group"
-          >
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-wonderful-purple-100 dark:bg-wonderful-purple-900/30 rounded-wonderful-md flex items-center justify-center">
-                <Globe className="w-4 h-4 text-wonderful-purple-600 dark:text-wonderful-purple-400" />
-              </div>
-              <span className="font-semibold text-gray-900 dark:text-white">{country.name}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={(e) => handleDelete(country.id, e)}
-                className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-wonderful-md transition-all duration-200 opacity-0 group-hover:opacity-100"
-                title="Delete country"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-              <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-wonderful-purple-600 dark:group-hover:text-wonderful-purple-400 transition-colors" />
-            </div>
-          </Link>
-        ))}
-        {countries.length === 0 && (
-          <div className="text-center py-8">
-            <Globe className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-            <p className="text-gray-500 dark:text-gray-400 font-medium">No countries added yet.</p>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Add a country to start organizing your screenings.</p>
-          </div>
+    <div className="card overflow-hidden">
+      <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+        <h2 className="text-h2 text-text-primary flex items-center gap-2">
+          <Globe className="w-5 h-5 text-accent" />
+          Countries
+        </h2>
+        {countries.length > 0 && (
+          <span className="text-tiny text-text-tertiary">{countries.length} regions</span>
         )}
       </div>
+
+      <div className="p-5">
+        {/* Add Country Form */}
+        <div className="flex gap-2 mb-5">
+          <input
+            type="text"
+            placeholder="Add new country..."
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+            className="flex-1 h-10 px-4 bg-background-tertiary/50 border border-border rounded-md text-body text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-all duration-150"
+          />
+          <Button
+            onClick={handleAdd}
+            disabled={adding || !newName}
+            size="md"
+          >
+            <Plus className="w-4 h-4" />
+            Add
+          </Button>
+        </div>
+
+        {/* Countries List */}
+        <div className="space-y-1">
+          {countries.map((country) => (
+            <Link
+              key={country.id}
+              href={`/countries/${country.id}`}
+              className="flex justify-between items-center px-4 py-3 rounded-lg hover:bg-background-tertiary/50 transition-all duration-150 group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-accent-muted flex items-center justify-center">
+                  <Globe className="w-4 h-4 text-accent" />
+                </div>
+                <span className="text-body text-text-primary font-medium">{country.name}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={(e) => handleDelete(country.id, e)}
+                  className="p-2 text-text-tertiary hover:text-danger hover:bg-danger-muted rounded-md transition-all duration-150 opacity-0 group-hover:opacity-100"
+                  title="Delete country"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <ArrowRight className="w-4 h-4 text-text-tertiary group-hover:text-accent group-hover:translate-x-0.5 transition-all duration-150" />
+              </div>
+            </Link>
+          ))}
+          {countries.length === 0 && (
+            <div className="text-center py-12">
+              <div className="w-12 h-12 rounded-xl bg-background-tertiary flex items-center justify-center mx-auto mb-4">
+                <Globe className="w-6 h-6 text-text-tertiary" />
+              </div>
+              <p className="text-body text-text-primary mb-2">No countries added</p>
+              <p className="text-small text-text-secondary">
+                Add countries to organize screenings by region
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-    </>
+    </div>
   );
 }

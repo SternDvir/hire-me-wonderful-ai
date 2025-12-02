@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Upload, BarChart3, Users } from "lucide-react";
+import { Home, Upload, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
-  { href: "/upload", label: "New Screening", icon: Upload },
-  { href: "/results", label: "All Results", icon: BarChart3 },
+  { href: "/upload", label: "Upload", icon: Upload },
+  { href: "/results", label: "Results", icon: BarChart3 },
 ];
 
 export function Navigation() {
@@ -20,45 +20,44 @@ export function Navigation() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/70 backdrop-blur-md border-b border-gray-200/50 shadow-wonderful-sm">
-      <div className="container mx-auto px-6">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-btn-primary rounded-wonderful-lg flex items-center justify-center shadow-md">
-              <Users className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold bg-text-primary bg-clip-text text-transparent hidden sm:inline">
-              Hire Me, Wonderful AI
-            </span>
-            <span className="text-xl font-bold bg-text-primary bg-clip-text text-transparent sm:hidden">
-              Wonderful AI
-            </span>
-          </Link>
-
-          {/* Navigation Links */}
-          <div className="flex items-center space-x-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = isActive(item.href);
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center space-x-2 px-4 py-2 rounded-wonderful-lg font-medium transition-all duration-200",
-                    active
-                      ? "bg-wonderful-purple-100 text-wonderful-purple-700"
-                      : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                  )}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span className="hidden md:inline">{item.label}</span>
-                </Link>
-              );
-            })}
+    <nav className="sticky top-0 z-50 h-14 bg-background/90 backdrop-blur-md border-b border-border">
+      <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
+        {/* Logo */}
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-h3 font-semibold text-text-primary hover:text-accent transition-colors"
+        >
+          <div className="w-7 h-7 rounded-lg bg-accent/90 flex items-center justify-center shadow-glow">
+            <span className="text-white text-small font-bold">H</span>
           </div>
+          <span className="hidden sm:inline">Hire Me</span>
+        </Link>
+
+        {/* Navigation Links */}
+        <div className="flex items-center gap-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-md text-body transition-all duration-150",
+                  active
+                    ? "bg-background-tertiary text-text-primary"
+                    : "text-text-secondary hover:text-text-primary hover:bg-background-tertiary/50"
+                )}
+              >
+                <Icon className={cn(
+                  "w-4 h-4",
+                  active && "text-accent"
+                )} />
+                <span className="hidden md:inline">{item.label}</span>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </nav>

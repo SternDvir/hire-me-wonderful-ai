@@ -2,8 +2,8 @@ import { HTMLAttributes, forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
-  variant?: 'default' | 'success' | 'error' | 'warning' | 'info' | 'purple';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: 'default' | 'pass' | 'reject' | 'review' | 'pending' | 'info';
+  size?: 'sm' | 'md';
 }
 
 export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
@@ -12,22 +12,19 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
       <span
         ref={ref}
         className={cn(
-          // Base styles
-          'inline-flex items-center font-semibold rounded-full transition-colors',
+          'inline-flex items-center font-medium rounded-md border transition-colors',
           // Sizes
           {
-            'text-xs px-2.5 py-0.5': size === 'sm',
-            'text-sm px-3 py-1': size === 'md',
-            'text-base px-4 py-1.5': size === 'lg',
+            'text-tiny px-1.5 py-0.5': size === 'sm',
+            'text-small px-2.5 py-1': size === 'md',
           },
-          // Variants
+          // Variants - using lighter, more inviting colors
           {
-            'bg-gray-100 text-gray-800': variant === 'default',
-            'bg-green-100 text-green-800': variant === 'success',
-            'bg-red-100 text-red-800': variant === 'error',
-            'bg-yellow-100 text-yellow-800': variant === 'warning',
-            'bg-blue-100 text-blue-800': variant === 'info',
-            'bg-purple-100 text-purple-800': variant === 'purple',
+            'bg-neutral-muted text-neutral-light border-neutral-border': variant === 'default' || variant === 'pending',
+            'bg-success-muted text-success-light border-success-border': variant === 'pass',
+            'bg-danger-muted text-danger-light border-danger-border': variant === 'reject',
+            'bg-warning-muted text-warning-light border-warning-border': variant === 'review',
+            'bg-accent-muted text-accent-hover border-accent/20': variant === 'info',
           },
           className
         )}

@@ -2,15 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { CandidateModal } from "@/components/CandidateModal";
-import { GradientOrbs } from "@/components/GradientOrbs";
+import { Badge } from "@/components/ui/Badge";
 import {
   Users,
   Globe,
   CheckCircle2,
   XCircle,
-  Calendar,
   MapPin,
-  BarChart3
+  TrendingUp
 } from "lucide-react";
 
 interface Country {
@@ -33,6 +32,44 @@ interface Candidate {
   session: {
     countryId?: string;
   };
+}
+
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  variant = 'default'
+}: {
+  label: string;
+  value: number | string;
+  icon: React.ElementType;
+  variant?: 'default' | 'success' | 'danger';
+}) {
+  const iconColors = {
+    default: 'text-text-secondary',
+    success: 'text-success',
+    danger: 'text-danger',
+  };
+
+  const valueColors = {
+    default: 'text-text-primary',
+    success: 'text-success',
+    danger: 'text-danger',
+  };
+
+  return (
+    <div className="bg-background-secondary border border-border rounded-md p-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-small text-text-secondary uppercase tracking-wide mb-1">{label}</div>
+          <div className={`text-h1 font-semibold ${valueColors[variant]}`}>
+            {typeof value === 'number' ? value.toLocaleString() : value}
+          </div>
+        </div>
+        <Icon className={`w-8 h-8 ${iconColors[variant]} opacity-50`} />
+      </div>
+    </div>
+  );
 }
 
 export default function ResultsPage() {
@@ -81,149 +118,114 @@ export default function ResultsPage() {
   };
 
   const passedCount = candidates.filter(c => c.decisionResult === 'PASS').length;
-  const passRate = candidates.length > 0 ? Math.round((passedCount / candidates.length) * 100) : 0;
+  const rejectedCount = candidates.filter(c => c.decisionResult === 'REJECT').length;
+  const passRate = candidates.length > 0 ? `${Math.round((passedCount / candidates.length) * 100)}%` : '0%';
 
   return (
-    <div className="relative min-h-screen">
-      <GradientOrbs variant="section" />
-
-      <div className="container mx-auto p-8 relative">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center space-x-4 mb-3">
-            <div className="w-12 h-12 bg-btn-primary rounded-wonderful-xl flex items-center justify-center shadow-md">
-              <BarChart3 className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-5xl font-bold bg-text-primary bg-clip-text text-transparent">All Results</h1>
-          </div>
-          <p className="text-lg text-gray-700 dark:text-gray-300">View and filter all candidate evaluations</p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-card-light dark:bg-card-dark backdrop-blur-sm p-6 rounded-wonderful-xl shadow-wonderful-lg border border-white/20 dark:border-gray-800/50">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 font-semibold mb-1 uppercase tracking-wide">Total Candidates</div>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white">{candidates.length}</div>
-              </div>
-              <Users className="w-10 h-10 text-wonderful-purple-600 dark:text-wonderful-purple-400 opacity-50" />
-            </div>
-          </div>
-
-          <div className="bg-card-light dark:bg-card-dark backdrop-blur-sm p-6 rounded-wonderful-xl shadow-wonderful-lg border border-white/20 dark:border-gray-800/50">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 font-semibold mb-1 uppercase tracking-wide">Passed</div>
-                <div className="text-4xl font-bold bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent">{passedCount}</div>
-              </div>
-              <CheckCircle2 className="w-10 h-10 text-green-600 opacity-50" />
-            </div>
-          </div>
-
-          <div className="bg-card-light dark:bg-card-dark backdrop-blur-sm p-6 rounded-wonderful-xl shadow-wonderful-lg border border-white/20 dark:border-gray-800/50">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 font-semibold mb-1 uppercase tracking-wide">Pass Rate</div>
-                <div className="text-4xl font-bold bg-text-accent bg-clip-text text-transparent">{passRate}%</div>
-              </div>
-              <BarChart3 className="w-10 h-10 text-wonderful-blue-600 opacity-50" />
-            </div>
-          </div>
-        </div>
-
-        {/* Filter */}
-        <div className="bg-card-light dark:bg-card-dark backdrop-blur-sm rounded-wonderful-xl shadow-wonderful-lg border border-white/20 dark:border-gray-800/50 p-6 mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Globe className="w-5 h-5 text-wonderful-purple-600" />
-              <span className="font-semibold text-gray-900 dark:text-white">Filter by Country</span>
-            </div>
-            <select
-              value={selectedCountry}
-              onChange={(e) => setSelectedCountry(e.target.value)}
-              className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-wonderful-lg px-4 py-2.5 min-w-[200px] focus:outline-none focus:ring-2 focus:ring-wonderful-purple-500 transition-all duration-200"
-            >
-              <option value="all">All Countries</option>
-              {countries.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Results */}
-        {loading ? (
-          <div className="flex justify-center py-16">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-wonderful-purple-600 mx-auto mb-4"></div>
-              <p className="text-gray-700 dark:text-gray-300 font-semibold text-lg">Loading candidates...</p>
-            </div>
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {candidates.map((candidate) => (
-              <div
-                key={candidate.id}
-                onClick={() => setSelectedCandidate(candidate)}
-                className="bg-card-light dark:bg-card-dark backdrop-blur-sm p-6 rounded-wonderful-xl shadow-wonderful-md border border-white/20 dark:border-gray-800/50 hover:shadow-wonderful-lg hover:shadow-glow-light dark:hover:shadow-glow-dark transition-all duration-300 cursor-pointer flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
-              >
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{candidate.fullName}</h3>
-                  <p className="text-gray-700 dark:text-gray-300 font-medium mb-2">
-                    {candidate.currentTitle} at {candidate.currentCompany}
-                  </p>
-                  <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="w-4 h-4" />
-                      <span>{new Date(candidate.evaluatedAt).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <MapPin className="w-4 h-4" />
-                      <span>{candidate.location}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-6">
-                  <div className="text-center">
-                    <div className="text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase mb-1">Score</div>
-                    <div className="text-2xl font-bold bg-text-accent bg-clip-text text-transparent">{candidate.overallScore}</div>
-                  </div>
-                  <div className={`px-5 py-2.5 rounded-wonderful-lg font-bold text-sm flex items-center space-x-2 ${
-                    candidate.decisionResult === 'PASS'
-                      ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
-                      : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
-                  }`}>
-                    {candidate.decisionResult === 'PASS' ? (
-                      <CheckCircle2 className="w-4 h-4" />
-                    ) : (
-                      <XCircle className="w-4 h-4" />
-                    )}
-                    <span>{candidate.decisionResult}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {candidates.length === 0 && (
-              <div className="text-center py-16 bg-card-light dark:bg-card-dark backdrop-blur-sm rounded-wonderful-xl border border-white/20 dark:border-gray-800/50">
-                <Users className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-700 dark:text-gray-300 font-medium text-lg">No candidates found for the selected criteria.</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {selectedCandidate && (
-          <CandidateModal
-            candidate={selectedCandidate}
-            onClose={() => setSelectedCandidate(null)}
-          />
-        )}
+    <div className="max-w-7xl mx-auto px-6 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-display text-text-primary">All Results</h1>
+        <p className="text-body text-text-secondary mt-1">View and filter all candidate evaluations</p>
       </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <StatCard label="Total" value={candidates.length} icon={Users} />
+        <StatCard label="Passed" value={passedCount} icon={CheckCircle2} variant="success" />
+        <StatCard label="Rejected" value={rejectedCount} icon={XCircle} variant="danger" />
+        <StatCard label="Pass Rate" value={passRate} icon={TrendingUp} />
+      </div>
+
+      {/* Filter */}
+      <div className="bg-background-secondary border border-border rounded-md p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-text-primary">
+            <Globe className="w-4 h-4 text-text-secondary" />
+            <span className="text-body font-medium">Filter by Country</span>
+          </div>
+          <select
+            value={selectedCountry}
+            onChange={(e) => setSelectedCountry(e.target.value)}
+            className="h-9 px-3 bg-background border border-border rounded text-body text-text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-colors min-w-[180px]"
+          >
+            <option value="all">All Countries</option>
+            {countries.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Results Table */}
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-border border-t-accent mx-auto mb-3"></div>
+            <p className="text-body text-text-secondary">Loading candidates...</p>
+          </div>
+        </div>
+      ) : candidates.length > 0 ? (
+        <div className="bg-background-secondary border border-border rounded-md overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-background-tertiary border-b border-border">
+                <th className="px-4 py-3 text-left text-small font-medium text-text-secondary uppercase tracking-wide">Name</th>
+                <th className="px-4 py-3 text-left text-small font-medium text-text-secondary uppercase tracking-wide hidden md:table-cell">Role</th>
+                <th className="px-4 py-3 text-left text-small font-medium text-text-secondary uppercase tracking-wide hidden lg:table-cell">Location</th>
+                <th className="px-4 py-3 text-center text-small font-medium text-text-secondary uppercase tracking-wide">Score</th>
+                <th className="px-4 py-3 text-center text-small font-medium text-text-secondary uppercase tracking-wide">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {candidates.map((candidate) => (
+                <tr
+                  key={candidate.id}
+                  onClick={() => setSelectedCandidate(candidate)}
+                  className="border-b border-border hover:bg-background-tertiary transition-colors cursor-pointer"
+                >
+                  <td className="px-4 py-3">
+                    <div className="text-body text-text-primary font-medium">{candidate.fullName}</div>
+                    <div className="text-small text-text-secondary md:hidden">{candidate.currentTitle}</div>
+                  </td>
+                  <td className="px-4 py-3 hidden md:table-cell">
+                    <div className="text-body text-text-primary">{candidate.currentTitle}</div>
+                    <div className="text-small text-text-secondary">{candidate.currentCompany}</div>
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell">
+                    <div className="flex items-center gap-1 text-body text-text-secondary">
+                      <MapPin className="w-3 h-3" />
+                      {candidate.location}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="text-body font-mono font-medium text-text-primary">{candidate.overallScore}</span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <Badge variant={candidate.decisionResult === 'PASS' ? 'pass' : 'reject'}>
+                      {candidate.decisionResult}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="text-center py-16 bg-background-secondary border border-border rounded-md">
+          <Users className="w-12 h-12 text-text-tertiary mx-auto mb-3" />
+          <p className="text-body text-text-secondary">No candidates found for the selected criteria</p>
+        </div>
+      )}
+
+      {selectedCandidate && (
+        <CandidateModal
+          candidate={selectedCandidate}
+          onClose={() => setSelectedCandidate(null)}
+        />
+      )}
     </div>
   );
 }

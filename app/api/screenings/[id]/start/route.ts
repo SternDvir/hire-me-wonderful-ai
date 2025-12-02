@@ -64,7 +64,7 @@ export async function POST(
 
     // Process batch in parallel
     const results = await Promise.all(
-      pendingCandidates.map(candidate => processCandidate(candidate.id, sessionId))
+      pendingCandidates.map((candidate: { id: string }) => processCandidate(candidate.id, sessionId))
     );
 
     const remaining = await prisma.candidateEvaluation.count({

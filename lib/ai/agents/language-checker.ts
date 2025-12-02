@@ -112,7 +112,7 @@ function normalizeLang(name: string): string {
 }
 
 // Helper to check proficiency level
-function isProfessional(proficiency?: string): boolean {
+function isProfessional(proficiency?: string | null): boolean {
   if (!proficiency) return false;
   const p = proficiency.toLowerCase();
   return (
@@ -268,8 +268,8 @@ export function checkLanguages(profile: LinkedInProfile, targetCountry?: string)
 
     // Check international companies
     const internationalCompanies = ['Microsoft', 'Google', 'Amazon', 'Meta', 'Apple', 'IBM', 'Oracle', 'SAP', 'Cisco', 'Intel', 'Facebook', 'Netflix', 'Uber', 'Airbnb'];
-    const hasIntlWork = profile.experiences.some(exp =>
-      exp.companyName && internationalCompanies.some(c => exp.companyName.toLowerCase().includes(c.toLowerCase()))
+    const hasIntlWork = (profile.experiences || []).some(exp =>
+      exp.companyName && internationalCompanies.some(c => (exp.companyName || '').toLowerCase().includes(c.toLowerCase()))
     );
 
     // Check if profile text (headline, about) is in English
@@ -283,7 +283,7 @@ export function checkLanguages(profile: LinkedInProfile, targetCountry?: string)
       hasEnglish = true;
       englishLevel = "Inferred Professional (from profile context)";
       englishInferred = true;
-    } else if (profile.jobTitle || profile.headline || profile.experiences.length > 0) {
+    } else if (profile.jobTitle || profile.headline || (profile.experiences || []).length > 0) {
       // If candidate has a professional profile but no explicit English signals,
       // assume basic English proficiency (common in tech) and note it
       hasEnglish = true;

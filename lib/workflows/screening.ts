@@ -52,8 +52,8 @@ export async function processCandidate(
     // 3. Company Enrichment
     // Extract unique companies from experience
     const companiesToEnrich = Array.from(new Set(
-      profile.experiences
-        .filter(exp => exp.companyName)
+      (profile.experiences || [])
+        .filter((exp): exp is typeof exp & { companyName: string } => !!exp.companyName)
         .map(exp => exp.companyName)
         .slice(0, 3) // Limit to top 3 recent companies to save cost/time
     ));
@@ -121,12 +121,15 @@ export async function processCandidate(
     }
     
     // Log error
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
     await prisma.sessionError.create({
       data: {
         screeningSessionId: sessionId,
         candidateId,
-        errorMessage: error.message || "Unknown error",
-        errorStack: error.stack
+        errorMessage,
+        errorStack
       }
     });
 
@@ -138,6 +141,6 @@ export async function processCandidate(
       }
     });
 
-    return { success: false, error: error.message };
+    return { success: false, error: errorMessage };
   }
 }

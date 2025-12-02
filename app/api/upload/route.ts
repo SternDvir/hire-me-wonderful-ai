@@ -93,10 +93,7 @@ export async function POST(req: NextRequest) {
                 processingTimeMs: 0
               }
             })
-          ),
-          {
-            timeout: 15000 // 15 seconds timeout per batch
-          }
+          )
         );
       }
 

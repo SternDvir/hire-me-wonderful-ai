@@ -100,19 +100,19 @@ export async function evaluateCandidate(
     companyContext: enrichedCompanies.map(c => ({ name: c.name, description: c.description })),
     headline: profile.headline,
     about: profile.about,
-    experience: profile.experiences.map(exp => ({
+    experience: (profile.experiences || []).map(exp => ({
       title: exp.title,
       companyName: exp.companyName,
       startDate: exp.jobStartedOn,
       endDate: exp.jobEndedOn || 'Present',
       description: exp.jobDescription,
     })),
-    education: profile.educations.map(edu => ({
+    education: (profile.educations || []).map(edu => ({
       degreeName: edu.degreeName || edu.subtitle,
       fieldOfStudy: edu.fieldOfStudy,
       schoolName: edu.schoolName || edu.title,
     })),
-    skills: profile.skills.map(s => s.name || s.title || "Unknown"),
+    skills: (profile.skills || []).map(s => s.name || s.title || "Unknown"),
   };
 
   try {

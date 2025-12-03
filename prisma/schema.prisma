@@ -66,13 +66,14 @@ model CandidateEvaluation {
   bonusFactors                Json?    @map("bonus_factors")
   
   finalDecision               Json?    @map("final_decision")
+  secondaryEvaluation         Json?    @map("secondary_evaluation") // Deeper analysis for REVIEW cases
   decisionResult              String?  @map("decision_result") @db.VarChar(10) // PENDING, PASS, REJECT
   overallScore                Int?     @map("overall_score")
-  
+
   evaluatedAt                 DateTime? @map("evaluated_at") @db.Timestamptz
   evaluationCost              Decimal?  @map("evaluation_cost") @db.Decimal(10, 4)
   processingTimeMs            Int?      @map("processing_time_ms")
-  
+
   manualOverride              Json?    @map("manual_override")
 
   session ScreeningSession @relation(fields: [screeningSessionId], references: [id], onDelete: Cascade)

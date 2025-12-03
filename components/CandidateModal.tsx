@@ -1,18 +1,72 @@
 "use client";
 
-import { X, CheckCircle2, XCircle, ExternalLink, Award, TrendingUp } from "lucide-react";
+import { useState } from "react";
+import { X, CheckCircle2, XCircle, ExternalLink, Award, TrendingUp, RefreshCw, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 
 interface CandidateModalProps {
   candidate: any;
   onClose: () => void;
+  onDecisionChange?: (candidateId: string, newDecision: string) => void;
 }
 
-export function CandidateModal({ candidate, onClose }: CandidateModalProps) {
+export function CandidateModal({ candidate, onClose, onDecisionChange }: CandidateModalProps) {
+  const [showOverrideForm, setShowOverrideForm] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [overrideError, setOverrideError] = useState<string | null>(null);
+
   if (!candidate) return null;
 
   const { finalDecision } = candidate;
+  const manualOverride = candidate.manualOverride as {
+    overridden?: boolean;
+    originalDecision?: string;
+    newDecision?: string;
+    overrideReason?: string;
+    overriddenAt?: string;
+  } | null;
+
+  const handleOverrideSubmit = async () => {
+    if (!overrideReason.trim()) {
+      setOverrideError("Please provide a reason for the override");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setOverrideError(null);
+
+    const newDecision = candidate.decisionResult === "PASS" ? "REJECT" : "PASS";
+
+    try {
+      const res = await fetch("/api/corrections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidateId: candidate.id,
+          newDecision,
+          reason: overrideReason
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to save override");
+      }
+
+      // Notify parent to refresh
+      if (onDecisionChange) {
+        onDecisionChange(candidate.id, newDecision);
+      }
+
+      setShowOverrideForm(false);
+      setOverrideReason("");
+    } catch (err) {
+      setOverrideError("Failed to save override. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div
@@ -60,16 +114,98 @@ export function CandidateModal({ candidate, onClose }: CandidateModalProps) {
             <div className="flex items-start gap-4">
               <div className="flex items-center gap-3">
                 <Badge
-                  variant={candidate.decisionResult === 'PASS' ? 'pass' : 'reject'}
+                  variant={
+                    candidate.decisionResult === 'PASS' ? 'pass' :
+                    candidate.decisionResult === 'REVIEW' ? 'review' : 'reject'
+                  }
                   className="text-body px-3 py-1.5"
                 >
                   {candidate.decisionResult}
                 </Badge>
+                {/* Override badge if overridden */}
+                {manualOverride?.overridden && (
+                  <Badge variant="info" className="text-tiny">
+                    Overridden from {manualOverride.originalDecision}
+                  </Badge>
+                )}
               </div>
-              <p className="text-body text-text-primary flex-1 leading-relaxed">
-                {finalDecision?.reasoning}
-              </p>
+              <div className="flex-1">
+                <p className="text-body text-text-primary leading-relaxed">
+                  {finalDecision?.reasoning}
+                </p>
+                {/* Show review reason for REVIEW decisions */}
+                {candidate.decisionResult === 'REVIEW' && finalDecision?.reviewReason && (
+                  <p className="text-small text-warning-light mt-2 italic">
+                    Needs review: {finalDecision.reviewReason}
+                  </p>
+                )}
+                {/* Show override reason if overridden */}
+                {manualOverride?.overridden && (
+                  <div className="mt-2 p-2 bg-accent/10 border border-accent/20 rounded-lg">
+                    <p className="text-small text-accent">
+                      <strong>Override reason:</strong> {manualOverride.overrideReason}
+                    </p>
+                  </div>
+                )}
+              </div>
+              {/* Override Button */}
+              <div className="shrink-0">
+                {!showOverrideForm && candidate.decisionResult !== 'PENDING' && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setShowOverrideForm(true)}
+                    className="flex items-center gap-1.5"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Override
+                  </Button>
+                )}
+              </div>
             </div>
+
+            {/* Override Form */}
+            {showOverrideForm && (
+              <div className="mt-4 p-4 bg-background border border-border rounded-lg">
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle className="w-4 h-4 text-warning-light" />
+                  <span className="text-body font-medium text-text-primary">
+                    Change decision from {candidate.decisionResult} to {candidate.decisionResult === 'PASS' ? 'REJECT' : 'PASS'}
+                  </span>
+                </div>
+                <textarea
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  placeholder="Why is this override needed? This will be used to improve the screening prompts..."
+                  className="w-full h-24 p-3 bg-background-secondary border border-border rounded-lg text-body text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 resize-none"
+                />
+                {overrideError && (
+                  <p className="text-small text-danger mt-2">{overrideError}</p>
+                )}
+                <div className="flex justify-end gap-2 mt-3">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setShowOverrideForm(false);
+                      setOverrideReason("");
+                      setOverrideError(null);
+                    }}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant={candidate.decisionResult === 'PASS' ? 'danger' : 'primary'}
+                    size="sm"
+                    onClick={handleOverrideSubmit}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Saving...' : `Mark as ${candidate.decisionResult === 'PASS' ? 'REJECT' : 'PASS'}`}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Strengths & Concerns - Side by side, neutral backgrounds, larger text */}

@@ -72,8 +72,8 @@ export const BonusFactorsSchema = z.object({
 
 // Final Decision Schema
 export const FinalDecisionSchema = z.object({
-  decision: z.enum(["PASS", "REJECT"]),
-  reasoning: z.string().max(100), // Increased slightly from 50 to allow for more context if needed, but prompt enforces 5 words
+  decision: z.enum(["PASS", "REVIEW", "REJECT"]), // Three-tier system
+  reasoning: z.string().max(200), // Allow more context for holistic reasoning
   overallScore: z.number().min(0).max(100),
   confidence: z.number().min(0).max(100),
   strengths: z.array(z.string()).min(1).max(10),
@@ -89,10 +89,18 @@ export const FinalDecisionSchema = z.object({
     leadershipCapability: z.number().min(0).max(100),
     customerFacing: z.number().min(0).max(100),
     culturalFit: z.number().min(0).max(100),
-    handsOnCurrent: z.number().min(0).max(100)
+    handsOnCurrent: z.number().min(0).max(100),
+    // New holistic dimensions
+    builderDNA: z.number().min(0).max(100), // Are they a builder at heart?
+    startupFit: z.number().min(0).max(100), // Can they thrive in startup chaos?
+    innovationCurrency: z.number().min(0).max(100) // Are they current with modern tech/AI?
   }),
   redFlags: z.array(z.string()).optional(),
-  suggestedInterviewQuestions: z.array(z.string()).optional()
+  suggestedInterviewQuestions: z.array(z.string()).optional(),
+  // New field for REVIEW cases
+  reviewReason: z.string().optional(), // Why this candidate needs secondary evaluation
+  // New field for pattern matching
+  similarToKnownCTOs: z.boolean().optional() // Does profile pattern match successful hires?
 });
 
 // Complete Candidate Evaluation Result

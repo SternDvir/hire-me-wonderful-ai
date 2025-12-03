@@ -258,6 +258,7 @@ export default function SessionPage() {
             >
               <option value="ALL">All</option>
               <option value="PASS">Pass</option>
+              <option value="REVIEW">Review</option>
               <option value="REJECT">Reject</option>
               <option value="PENDING">Pending</option>
             </select>
@@ -341,6 +342,7 @@ export default function SessionPage() {
                   <Badge
                     variant={
                       evaluation.decisionResult === 'PASS' ? 'pass' :
+                      evaluation.decisionResult === 'REVIEW' ? 'review' :
                       evaluation.decisionResult === 'REJECT' ? 'reject' :
                       'pending'
                     }
@@ -387,6 +389,11 @@ export default function SessionPage() {
         <CandidateModal
           candidate={selectedCandidate}
           onClose={() => setSelectedCandidate(null)}
+          onDecisionChange={() => {
+            // Refresh the session data after a decision change
+            fetchSession();
+            setSelectedCandidate(null);
+          }}
         />
       )}
     </div>

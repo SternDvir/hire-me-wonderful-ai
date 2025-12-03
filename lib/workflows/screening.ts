@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { checkLanguages } from "@/lib/ai/agents/language-checker";
 import { enrichCompany } from "@/lib/enrichment/tavily";
 import { evaluateCandidate } from "@/lib/ai/agents/final-decision";
-import { CandidateEvaluationResultSchema } from "@/lib/schemas/evaluation";
+import { performSecondaryEvaluation } from "@/lib/ai/agents/secondary-evaluation";
 import { LinkedInProfile } from "@/lib/schemas/linkedin";
 
 export async function processCandidate(
@@ -69,9 +69,45 @@ export async function processCandidate(
     decisionResult = finalDecision.decision;
     overallScore = finalDecision.overallScore;
 
+    // 5. Secondary Evaluation for REVIEW cases
+    // If the initial decision is REVIEW, perform deeper analysis
+    let secondaryEvaluation = null;
+    if (decisionResult === "REVIEW") {
+      console.log(`[${candidateId}] Initial decision: REVIEW (score: ${overallScore}). Running secondary evaluation...`);
+
+      secondaryEvaluation = await performSecondaryEvaluation(
+        profile,
+        enrichedCompanies,
+        languageCheck,
+        finalDecision
+      );
+
+      // Update decision based on secondary evaluation
+      decisionResult = secondaryEvaluation.finalDecision;
+      overallScore = secondaryEvaluation.updatedScore;
+
+      // Merge secondary evaluation findings into final decision
+      finalDecision = {
+        ...finalDecision,
+        decision: secondaryEvaluation.finalDecision,
+        overallScore: secondaryEvaluation.updatedScore,
+        confidence: secondaryEvaluation.confidence,
+        reasoning: `[Secondary Eval] ${secondaryEvaluation.reasoning}`,
+        concerns: [...finalDecision.concerns, ...secondaryEvaluation.keyFindings.filter(f => !f.includes("positive"))],
+        strengths: [...finalDecision.strengths, ...secondaryEvaluation.keyFindings.filter(f => f.includes("positive") || f.includes("strong"))],
+        redFlags: [
+          ...(finalDecision.redFlags || []),
+          secondaryEvaluation.builderDNAEvidence.includes("manager") ? "Manager mentality detected in secondary eval" : null,
+          secondaryEvaluation.innovationCurrencyAssessment.includes("outdated") ? "Skills not current" : null,
+        ].filter(Boolean) as string[]
+      };
+
+      console.log(`[${candidateId}] Secondary evaluation result: ${decisionResult} (updated score: ${overallScore})`);
+    }
+
     const processingTimeMs = Date.now() - startTime;
 
-    // 5. Save Results
+    // 6. Save Results
     await prisma.candidateEvaluation.update({
       where: { id: candidateId },
       data: {
@@ -82,7 +118,10 @@ export async function processCandidate(
         overallScore,
         processingTimeMs,
         evaluatedAt: new Date(),
-        // We should also update the session stats
+        // Store secondary evaluation if it was performed
+        ...(secondaryEvaluation && {
+          secondaryEvaluation: secondaryEvaluation as any
+        })
       }
     });
 

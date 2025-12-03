@@ -4,9 +4,30 @@ import { prisma } from "@/lib/prisma"; // We need to create this client instance
 import { ScreeningSessionSchema } from "@/lib/schemas/session";
 import { z } from "zod";
 
+// Recursively sanitize an object to remove null characters that PostgreSQL can't handle
+function sanitizeForPostgres(obj: unknown): unknown {
+  if (typeof obj === 'string') {
+    // Remove null characters and other problematic unicode
+    return obj.replace(/\u0000/g, '');
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeForPostgres);
+  }
+  if (obj !== null && typeof obj === 'object') {
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      sanitized[key] = sanitizeForPostgres(value);
+    }
+    return sanitized;
+  }
+  return obj;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const rawBody = await req.json();
+    // Sanitize the input to remove null characters before processing
+    const body = sanitizeForPostgres(rawBody) as Record<string, unknown>;
     
     // 1. Validate input structure
     // Expecting { candidates: ApifyOutput, config: ScreeningConfig }
@@ -55,47 +76,28 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // 3. Store Candidates (Batch create)
-    // We store the raw profile data in the CandidateEvaluation table
-    // The evaluation fields will be populated later by the workflow
-    
-    // Prisma createMany doesn't support nested relations easily with JSON fields in the way we might want if we were doing complex things,
-    // but here we are just dumping JSON.
-    // However, we need to map the Apify profile to our DB schema.
-    
-    // 3. Store Candidates (Batch create)
-    // We store the raw profile data in the CandidateEvaluation table
-    // The evaluation fields will be populated later by the workflow
-    
-    // Insert candidates in batches to avoid transaction timeout
+    // 3. Store Candidates using createMany for better performance
     try {
-      const batchSize = 10; // Insert 10 at a time
-      for (let i = 0; i < candidates.length; i += batchSize) {
-        const batch = candidates.slice(i, i + batchSize);
-        await prisma.$transaction(
-          batch.map(profile =>
-            prisma.candidateEvaluation.create({
-              data: {
-                screeningSessionId: session.id,
-                candidateId: profile.linkedinUrl, // Use URL as ID
-                linkedinUrl: profile.linkedinUrl,
-                fullName: profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim(),
-                currentTitle: profile.jobTitle || "",
-                currentCompany: profile.companyName || "",
-                location: profile.addressCountryOnly || "", // Fixed property access
-                profileData: profile as any, // Cast to any to satisfy Prisma Json type
+      const candidateData = candidates.map(profile => ({
+        screeningSessionId: session.id,
+        candidateId: profile.linkedinUrl,
+        linkedinUrl: profile.linkedinUrl,
+        fullName: profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim(),
+        currentTitle: profile.jobTitle || "",
+        currentCompany: profile.companyName || "",
+        location: profile.addressCountryOnly || "",
+        profileData: profile as any,
+        decisionResult: "PENDING" as const,
+        overallScore: 0,
+        evaluationCost: 0,
+        processingTimeMs: 0
+      }));
 
-                // Evaluation fields are now nullable/optional in schema
-                // decisionResult is PENDING
-                decisionResult: "PENDING",
-                overallScore: 0,
-                evaluationCost: 0,
-                processingTimeMs: 0
-              }
-            })
-          )
-        );
-      }
+      // Use createMany for bulk insert - much faster than individual creates
+      await prisma.candidateEvaluation.createMany({
+        data: candidateData,
+        skipDuplicates: true // Skip if candidateId already exists
+      });
 
       return NextResponse.json({
         success: true,
@@ -103,7 +105,7 @@ export async function POST(req: NextRequest) {
         count: candidates.length
       });
     } catch (dbError) {
-      console.error("Database transaction error:", dbError);
+      console.error("Database error:", dbError);
       // Delete the session if candidate insertion failed
       await prisma.screeningSession.delete({ where: { id: session.id } }).catch(() => {});
       throw dbError;

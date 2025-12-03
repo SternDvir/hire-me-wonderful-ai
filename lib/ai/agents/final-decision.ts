@@ -284,8 +284,12 @@ export async function evaluateCandidate(
     }
     
     const parsed = JSON.parse(jsonContent);
+
+    // Log what we're trying to parse for debugging
+    console.log("Parsed AI response:", JSON.stringify(parsed, null, 2).substring(0, 500));
+
     const decision = FinalDecisionSchema.parse(parsed);
-    
+
     if (!decision) {
       throw new Error("Failed to parse decision");
     }
@@ -296,6 +300,10 @@ export async function evaluateCandidate(
     console.error(error);
     if (error instanceof Error) {
       console.error("AI Message:", error.message);
+    }
+    // Log Zod validation errors specifically
+    if (error && typeof error === 'object' && 'issues' in error) {
+      console.error("Zod validation issues:", JSON.stringify((error as { issues: unknown }).issues, null, 2));
     }
     return {
       decision: "REJECT",

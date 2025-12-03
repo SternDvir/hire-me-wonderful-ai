@@ -38,7 +38,7 @@ export async function POST(
         screeningSessionId: sessionId,
         decisionResult: "PENDING"
       },
-      take: 5 // Process 5 at a time to stay within timeout
+      take: 2 // Process 2 at a time to stay within timeout and DB connection limits
     });
 
     if (pendingCandidates.length === 0) {
@@ -62,10 +62,12 @@ export async function POST(
       return NextResponse.json({ status: "processing", processed: 0, remaining });
     }
 
-    // Process batch in parallel
-    const results = await Promise.all(
-      pendingCandidates.map((candidate: { id: string }) => processCandidate(candidate.id, sessionId))
-    );
+    // Process batch sequentially to avoid exhausting DB connection pool
+    const results = [];
+    for (const candidate of pendingCandidates) {
+      const result = await processCandidate(candidate.id, sessionId);
+      results.push(result);
+    }
 
     const remaining = await prisma.candidateEvaluation.count({
       where: {

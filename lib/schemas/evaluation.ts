@@ -73,11 +73,11 @@ export const BonusFactorsSchema = z.object({
 // Final Decision Schema
 export const FinalDecisionSchema = z.object({
   decision: z.enum(["PASS", "REVIEW", "REJECT"]), // Three-tier system
-  reasoning: z.string().max(200), // Allow more context for holistic reasoning
+  reasoning: z.string(), // Allow any length reasoning
   overallScore: z.number().min(0).max(100),
   confidence: z.number().min(0).max(100),
-  strengths: z.array(z.string()).min(1).max(10),
-  concerns: z.array(z.string()).max(10),
+  strengths: z.array(z.string()).max(10).default([]), // Allow empty strengths
+  concerns: z.array(z.string()).max(10).default([]), // Allow empty concerns
   interviewRecommendation: z.enum([
     "Highly Recommended",
     "Recommended",
@@ -90,10 +90,10 @@ export const FinalDecisionSchema = z.object({
     customerFacing: z.number().min(0).max(100),
     culturalFit: z.number().min(0).max(100),
     handsOnCurrent: z.number().min(0).max(100),
-    // New holistic dimensions
-    builderDNA: z.number().min(0).max(100), // Are they a builder at heart?
-    startupFit: z.number().min(0).max(100), // Can they thrive in startup chaos?
-    innovationCurrency: z.number().min(0).max(100) // Are they current with modern tech/AI?
+    // New holistic dimensions - optional with defaults for backward compatibility
+    builderDNA: z.number().min(0).max(100).optional().default(0),
+    startupFit: z.number().min(0).max(100).optional().default(0),
+    innovationCurrency: z.number().min(0).max(100).optional().default(0)
   }),
   redFlags: z.array(z.string()).optional(),
   suggestedInterviewQuestions: z.array(z.string()).optional(),

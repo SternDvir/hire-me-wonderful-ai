@@ -206,10 +206,11 @@ export default function UploadPage() {
                   Drop JSON file here
                 </p>
                 <p className="text-small text-text-tertiary mb-5">or click to browse</p>
-                <label htmlFor="file-upload">
-                  <Button variant="secondary" size="md" className="cursor-pointer">
-                    Browse Files
-                  </Button>
+                <label
+                  htmlFor="file-upload"
+                  className="inline-flex items-center justify-center font-medium rounded-lg h-10 px-5 text-body gap-2 bg-background-tertiary/50 hover:bg-background-tertiary border border-border hover:border-border-focus text-text-primary cursor-pointer transition-all duration-150"
+                >
+                  Browse Files
                 </label>
               </div>
             )}

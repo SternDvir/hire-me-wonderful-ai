@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, CheckCircle2, XCircle, ExternalLink, Award, TrendingUp, RefreshCw, AlertTriangle } from "lucide-react";
+import { X, CheckCircle2, XCircle, ExternalLink, Award, TrendingUp, RefreshCw, AlertTriangle, Copy, Check } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 
@@ -16,6 +16,17 @@ export function CandidateModal({ candidate, onClose, onDecisionChange }: Candida
   const [overrideReason, setOverrideReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [overrideError, setOverrideError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyRejectReason = async () => {
+    const reason = candidate.finalDecision?.shortRejectReason;
+    if (reason) {
+      // Copy as plain text (no formatting)
+      await navigator.clipboard.writeText(reason);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   if (!candidate) return null;
 
@@ -138,6 +149,26 @@ export function CandidateModal({ candidate, onClose, onDecisionChange }: Candida
                   <p className="text-small text-warning-light mt-2 italic">
                     Needs review: {finalDecision.reviewReason}
                   </p>
+                )}
+                {/* Show short reject reason with copy button for REJECT decisions */}
+                {candidate.decisionResult === 'REJECT' && finalDecision?.shortRejectReason && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-small text-text-secondary">Quick reason:</span>
+                    <code className="text-small bg-background-tertiary px-2 py-1 rounded text-text-primary">
+                      {finalDecision.shortRejectReason}
+                    </code>
+                    <button
+                      onClick={handleCopyRejectReason}
+                      className="p-1.5 hover:bg-background-tertiary rounded transition-colors"
+                      title="Copy to clipboard (plain text)"
+                    >
+                      {copied ? (
+                        <Check className="w-3.5 h-3.5 text-success" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5 text-text-tertiary hover:text-text-primary" />
+                      )}
+                    </button>
+                  </div>
                 )}
                 {/* Show override reason if overridden */}
                 {manualOverride?.overridden && (

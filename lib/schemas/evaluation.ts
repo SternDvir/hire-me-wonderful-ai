@@ -100,7 +100,9 @@ export const FinalDecisionSchema = z.object({
   // New field for REVIEW cases
   reviewReason: z.string().optional(), // Why this candidate needs secondary evaluation
   // New field for pattern matching
-  similarToKnownCTOs: z.boolean().optional() // Does profile pattern match successful hires?
+  similarToKnownCTOs: z.boolean().optional(), // Does profile pattern match successful hires?
+  // Short rejection reason for spreadsheet (5-10 words max)
+  shortRejectReason: z.string().optional() // e.g., "Executive drift, no hands-on in 8 years"
 });
 
 // Complete Candidate Evaluation Result

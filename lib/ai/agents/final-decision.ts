@@ -191,7 +191,8 @@ Output a valid JSON object:
   "redFlags": ["Red flag 1", ...] (if any),
   "suggestedInterviewQuestions": ["Question to probe X", ...],
   "reviewReason": "Why secondary eval needed" (only if decision is REVIEW),
-  "similarToKnownCTOs": true/false
+  "similarToKnownCTOs": true/false,
+  "shortRejectReason": "5-10 word summary for spreadsheet" (REQUIRED for REJECT, e.g., "Executive drift, no hands-on in 8 years" or "Legacy tech only, no AI experience")
 }
 
 SCORING CALIBRATION:

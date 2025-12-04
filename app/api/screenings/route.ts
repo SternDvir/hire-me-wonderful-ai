@@ -4,35 +4,28 @@ import { prisma } from "@/lib/prisma";
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const countryId = searchParams.get("countryId");
     const dateFrom = searchParams.get("dateFrom");
     const dateTo = searchParams.get("dateTo");
 
     const where: Record<string, unknown> = {};
 
-    if (countryId) {
-      where.countryId = countryId;
-    }
-
     if (dateFrom || dateTo) {
-      where.createdAt = {};
+      const dateFilter: Record<string, Date> = {};
       if (dateFrom) {
-        (where.createdAt as Record<string, Date>).gte = new Date(dateFrom);
+        dateFilter.gte = new Date(dateFrom);
       }
       if (dateTo) {
         const endDate = new Date(dateTo);
         endDate.setHours(23, 59, 59, 999);
-        (where.createdAt as Record<string, Date>).lte = endDate;
+        dateFilter.lte = endDate;
       }
+      where.createdAt = dateFilter;
     }
 
     const sessions = await prisma.screeningSession.findMany({
       where: Object.keys(where).length > 0 ? where : undefined,
       orderBy: { createdAt: "desc" },
       take: 50,
-      include: {
-        country: true
-      }
     });
 
     return NextResponse.json(sessions);
@@ -63,35 +56,12 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
-export async function PATCH(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { sessionId, countryId } = body;
-
-    if (!sessionId) {
-      return NextResponse.json({ error: "Session ID is required" }, { status: 400 });
-    }
-
-    // Update session's country
-    const updatedSession = await prisma.screeningSession.update({
-      where: { id: sessionId },
-      data: { countryId: countryId || null },
-      include: { country: true }
-    });
-
-    return NextResponse.json(updatedSession);
-  } catch (error) {
-    console.error("Error updating session:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-  }
-}
-
 export async function POST(req: NextRequest) {
   // Creation is primarily handled by /api/upload, but we can support empty session creation here
   try {
     const body = await req.json();
     const { config, createdBy } = body;
-    
+
     const session = await prisma.screeningSession.create({
       data: {
         createdBy: createdBy || "user",
@@ -108,7 +78,7 @@ export async function POST(req: NextRequest) {
         erroredCandidates: 0
       }
     });
-    
+
     return NextResponse.json(session);
   } catch (error) {
     console.error("Error creating session:", error);

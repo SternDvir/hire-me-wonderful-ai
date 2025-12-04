@@ -1,55 +1,97 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import { GradientOrbs } from "@/components/GradientOrbs";
 import { CandidateModal } from "@/components/CandidateModal";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import {
   ArrowLeft,
   Globe,
   Users,
   CheckCircle2,
   XCircle,
-  Calendar,
   Filter,
   Search,
-  Briefcase,
   TrendingUp,
-  ChevronLeft,
-  ChevronRight
+  Loader2,
+  AlertCircle
 } from "lucide-react";
+
+interface CountryStats {
+  totalCandidates: number;
+  passedCandidates: number;
+  rejectedCandidates: number;
+  pendingCandidates: number;
+  passRate: number;
+}
 
 interface Country {
   id: string;
   name: string;
-}
-
-interface Session {
-  id: string;
   createdAt: string;
-  status: string;
-  totalCandidates: number;
-  passedCandidates: number;
-  rejectedCandidates: number;
 }
 
 interface Candidate {
   id: string;
   fullName: string;
-  currentTitle: string;
-  currentCompany: string;
-  location: string;
-  decisionResult: string;
-  overallScore: number;
-  evaluatedAt: string;
+  currentTitle: string | null;
+  currentCompany: string | null;
+  location: string | null;
   linkedinUrl: string;
-  finalDecision: {
-    reasoning: string;
-    strengths: string[];
-    concerns: string[];
-    detailedAnalysis: Record<string, number>;
+  decisionResult: string | null;
+  overallScore: number | null;
+  evaluatedAt: string | null;
+  finalDecision: any;
+  manualOverride: any;
+}
+
+interface Pagination {
+  page: number;
+  limit: number;
+  totalItems: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  variant = 'default'
+}: {
+  label: string;
+  value: number | string;
+  icon: React.ElementType;
+  variant?: 'default' | 'success' | 'danger' | 'accent';
+}) {
+  const iconColors = {
+    default: 'text-text-secondary',
+    success: 'text-success',
+    danger: 'text-danger',
+    accent: 'text-accent',
   };
+
+  const valueColors = {
+    default: 'text-text-primary',
+    success: 'text-success',
+    danger: 'text-danger',
+    accent: 'text-accent',
+  };
+
+  return (
+    <div className="bg-background-secondary border border-border rounded-md p-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-small text-text-secondary uppercase tracking-wide mb-1">{label}</div>
+          <div className={`text-h1 font-semibold ${valueColors[variant]}`}>
+            {typeof value === 'number' ? value.toLocaleString() : value}
+          </div>
+        </div>
+        <Icon className={`w-8 h-8 ${iconColors[variant]} opacity-50`} />
+      </div>
+    </div>
+  );
 }
 
 export default function CountryDetailPage() {
@@ -58,522 +100,332 @@ export default function CountryDetailPage() {
   const id = params.id as string;
 
   const [country, setCountry] = useState<Country | null>(null);
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [stats, setStats] = useState<CountryStats | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [filteredCandidates, setFilteredCandidates] = useState<Candidate[]>([]);
+  const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
 
   // Filter states
   const [filterDecision, setFilterDecision] = useState<string>("ALL");
-  const [filterDateFrom, setFilterDateFrom] = useState<string>("");
-  const [filterDateTo, setFilterDateTo] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
 
-  // Pagination states for candidates
-  const [currentPage, setCurrentPage] = useState(1);
-  const candidatesPerPage = 50;
-
-  // Pagination states for sessions
-  const [sessionsPage, setSessionsPage] = useState(1);
-  const sessionsPerPage = 5;
-
+  // Debounce search input
   useEffect(() => {
-    fetchCountryData();
-  }, [id]);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  useEffect(() => {
-    applyFilters();
-  }, [candidates, filterDecision, filterDateFrom, filterDateTo, searchQuery]);
+  const fetchCountryData = useCallback(async (page: number = 1, append: boolean = false) => {
+    if (page === 1) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filterDecision, filterDateFrom, filterDateTo, searchQuery]);
-
-  const fetchCountryData = async () => {
-    setLoading(true);
     try {
-      // Fetch country details
-      const countryRes = await fetch(`/api/countries/${id}`);
-      if (countryRes.ok) {
-        const countryData = await countryRes.json();
-        setCountry(countryData);
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: "20",
+      });
+
+      if (filterDecision !== "ALL") {
+        params.set("decision", filterDecision);
       }
 
-      // Fetch sessions for this country
-      const sessionsRes = await fetch(`/api/screenings?countryId=${id}`);
-      if (sessionsRes.ok) {
-        const sessionsData = await sessionsRes.json();
-        setSessions(sessionsData);
+      if (debouncedSearch.trim()) {
+        params.set("search", debouncedSearch.trim());
       }
 
-      // Fetch candidates for this country
-      const candidatesRes = await fetch(`/api/candidates?countryId=${id}`);
-      if (candidatesRes.ok) {
-        const candidatesData = await candidatesRes.json();
-        setCandidates(candidatesData);
+      const res = await fetch(`/api/countries/${id}?${params}`);
+
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error("Country not found");
+        }
+        throw new Error("Failed to fetch country data");
       }
-    } catch (error) {
-      console.error("Failed to fetch country data:", error);
+
+      const data = await res.json();
+
+      setCountry(data.country);
+      setStats(data.stats);
+      setPagination(data.pagination);
+
+      if (append) {
+        setCandidates(prev => [...prev, ...data.candidates]);
+      } else {
+        setCandidates(data.candidates);
+      }
+
+      setError(null);
+    } catch (err) {
+      console.error("Failed to fetch country data:", err);
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  };
+  }, [id, filterDecision, debouncedSearch]);
 
-  const applyFilters = () => {
-    let filtered = [...candidates];
+  // Initial load and filter changes
+  useEffect(() => {
+    fetchCountryData(1, false);
+  }, [fetchCountryData]);
 
-    // Filter by decision
-    if (filterDecision !== "ALL") {
-      filtered = filtered.filter((c) => c.decisionResult === filterDecision);
+  const loadMore = () => {
+    if (pagination && pagination.hasMore && !loadingMore) {
+      fetchCountryData(pagination.page + 1, true);
     }
-
-    // Filter by date range
-    if (filterDateFrom || filterDateTo) {
-      filtered = filtered.filter((c) => {
-        if (!c.evaluatedAt) return false;
-        const evalDate = new Date(c.evaluatedAt);
-        if (filterDateFrom && evalDate < new Date(filterDateFrom)) return false;
-        if (filterDateTo) {
-          const endDate = new Date(filterDateTo);
-          endDate.setDate(endDate.getDate() + 1);
-          if (evalDate >= endDate) return false;
-        }
-        return true;
-      });
-    }
-
-    // Filter by search query (name or company)
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (c) =>
-          c.fullName.toLowerCase().includes(query) ||
-          c.currentCompany.toLowerCase().includes(query) ||
-          c.currentTitle.toLowerCase().includes(query)
-      );
-    }
-
-    setFilteredCandidates(filtered);
   };
 
   const clearFilters = () => {
     setFilterDecision("ALL");
-    setFilterDateFrom("");
-    setFilterDateTo("");
     setSearchQuery("");
+  };
+
+  const hasActiveFilters = filterDecision !== "ALL" || searchQuery.trim() !== "";
+
+  const handleDecisionChange = () => {
+    // Refresh the data after a decision change
+    fetchCountryData(1, false);
+    setSelectedCandidate(null);
   };
 
   if (loading) {
     return (
-      <div className="relative min-h-screen flex items-center justify-center">
-        <GradientOrbs variant="minimal" />
-        <div className="text-center relative">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-wonderful-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-700 dark:text-gray-300 font-semibold text-lg">Loading country details...</p>
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-border border-t-accent mx-auto mb-3"></div>
+          <p className="text-body text-text-secondary">Loading country details...</p>
         </div>
       </div>
     );
   }
 
-  if (!country) {
+  if (error) {
     return (
-      <div className="relative min-h-screen">
-        <GradientOrbs variant="minimal" />
-        <div className="container mx-auto p-8 relative">
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-6 py-4 rounded-wonderful-lg">
-            <strong className="font-bold">Error!</strong>
-            <span className="block sm:inline"> Country not found.</span>
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="bg-danger-muted border border-danger-border text-red-400 px-4 py-3 rounded-md flex items-center gap-3">
+          <AlertCircle className="w-5 h-5" />
+          <div>
+            <strong className="font-semibold">Error:</strong> {error}
           </div>
-          <button
-            onClick={() => router.push("/")}
-            className="mt-4 bg-btn-primary hover:bg-btn-primary-hover text-white px-6 py-3 rounded-wonderful-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center space-x-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Dashboard</span>
-          </button>
         </div>
+        <Button onClick={() => router.push("/")} className="mt-4">
+          Back to Dashboard
+        </Button>
       </div>
     );
   }
 
-  const passedCount = filteredCandidates.filter((c) => c.decisionResult === "PASS").length;
-  const passRate = filteredCandidates.length > 0
-    ? Math.round((passedCount / filteredCandidates.length) * 100)
-    : 0;
-
-  // Pagination logic
-  const totalPages = Math.ceil(filteredCandidates.length / candidatesPerPage);
-  const startIndex = (currentPage - 1) * candidatesPerPage;
-  const endIndex = startIndex + candidatesPerPage;
-  const paginatedCandidates = filteredCandidates.slice(startIndex, endIndex);
-
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
+  if (!country || !stats) {
+    return null;
+  }
 
   return (
-    <div className="relative min-h-screen">
-      <GradientOrbs variant="section" />
-
-      <div className="container mx-auto p-8 relative">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => router.push("/")}
-            className="mb-4 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex items-center space-x-2 font-semibold transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Dashboard</span>
-          </button>
-          <div className="flex items-center space-x-4 mb-3">
-            <div className="w-12 h-12 bg-btn-primary rounded-wonderful-xl flex items-center justify-center shadow-glow-light dark:shadow-glow-dark">
-              <Globe className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-5xl font-bold bg-text-primary bg-clip-text text-transparent">{country.name}</h1>
+    <div className="max-w-7xl mx-auto px-6 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <button
+          onClick={() => router.push("/")}
+          className="mb-4 text-text-secondary hover:text-text-primary flex items-center gap-2 text-body transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Dashboard
+        </button>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
+            <Globe className="w-6 h-6 text-accent" />
           </div>
-          <p className="text-lg text-gray-700 dark:text-gray-300">Screening analytics and candidate management</p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-card-light dark:bg-card-dark backdrop-blur-sm p-6 rounded-wonderful-xl shadow-wonderful-lg dark:shadow-wonderful-xl border border-white/20 dark:border-gray-800/50">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 font-semibold mb-1 uppercase tracking-wide">Total Sessions</div>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white">{sessions.length}</div>
-              </div>
-              <Briefcase className="w-10 h-10 text-wonderful-purple-600 dark:text-wonderful-purple-400 opacity-50" />
-            </div>
-          </div>
-
-          <div className="bg-card-light dark:bg-card-dark backdrop-blur-sm p-6 rounded-wonderful-xl shadow-wonderful-lg dark:shadow-wonderful-xl border border-white/20 dark:border-gray-800/50">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 font-semibold mb-1 uppercase tracking-wide">Total Candidates</div>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white">{filteredCandidates.length}</div>
-              </div>
-              <Users className="w-10 h-10 text-wonderful-purple-600 dark:text-wonderful-purple-400 opacity-50" />
-            </div>
-          </div>
-
-          <div className="bg-card-light dark:bg-card-dark backdrop-blur-sm p-6 rounded-wonderful-xl shadow-wonderful-lg dark:shadow-wonderful-xl border border-white/20 dark:border-gray-800/50">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 font-semibold mb-1 uppercase tracking-wide">Passed</div>
-                <div className="text-4xl font-bold bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent">{passedCount}</div>
-              </div>
-              <CheckCircle2 className="w-10 h-10 text-green-600 opacity-50" />
-            </div>
-          </div>
-
-          <div className="bg-card-light dark:bg-card-dark backdrop-blur-sm p-6 rounded-wonderful-xl shadow-wonderful-lg dark:shadow-wonderful-xl border border-white/20 dark:border-gray-800/50">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 font-semibold mb-1 uppercase tracking-wide">Pass Rate</div>
-                <div className="text-4xl font-bold bg-text-accent bg-clip-text text-transparent">{passRate}%</div>
-              </div>
-              <TrendingUp className="w-10 h-10 text-wonderful-blue-600 opacity-50" />
-            </div>
+          <div>
+            <h1 className="text-display text-text-primary">{country.name}</h1>
+            <p className="text-body text-text-secondary mt-1">
+              Candidate screening analytics
+            </p>
           </div>
         </div>
+      </div>
 
-        {/* Sessions List */}
-        {sessions.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Screening Sessions</h2>
-            <div className="bg-card-light dark:bg-card-dark backdrop-blur-sm rounded-wonderful-xl shadow-wonderful-lg dark:shadow-wonderful-xl border border-white/20 dark:border-gray-800/50 overflow-hidden">
-              <div className="grid gap-4 p-4">
-                {sessions
-                  .slice((sessionsPage - 1) * sessionsPerPage, sessionsPage * sessionsPerPage)
-                  .map((session) => (
-                  <Link
-                    key={session.id}
-                    href={`/screenings/${session.id}`}
-                    className="flex items-center justify-between p-4 bg-gray-50/50 dark:bg-gray-800/50 rounded-wonderful-lg hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-all duration-200"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <Calendar className="w-5 h-5 text-wonderful-purple-600 dark:text-wonderful-purple-400" />
-                      <div>
-                        <div className="font-semibold text-gray-900 dark:text-white">
-                          {new Date(session.createdAt).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })} at {new Date(session.createdAt).toLocaleTimeString('en-US', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          {session.totalCandidates} candidates • {session.passedCandidates} passed • {session.rejectedCandidates} rejected
-                        </div>
-                      </div>
-                    </div>
-                    <span className={`px-3 py-1.5 text-xs font-semibold rounded-full ${
-                      session.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400' :
-                      session.status === 'processing' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400' :
-                      'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300'
-                    }`}>
-                      {session.status.toUpperCase()}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-              {/* Sessions Pagination */}
-              {sessions.length > sessionsPerPage && (
-                <div className="flex items-center justify-center space-x-4 p-4 border-t border-gray-100 dark:border-gray-800">
-                  <button
-                    onClick={() => setSessionsPage(p => Math.max(1, p - 1))}
-                    disabled={sessionsPage === 1}
-                    className="p-2 rounded-wonderful-lg bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                    Page {sessionsPage} of {Math.ceil(sessions.length / sessionsPerPage)}
-                  </span>
-                  <button
-                    onClick={() => setSessionsPage(p => Math.min(Math.ceil(sessions.length / sessionsPerPage), p + 1))}
-                    disabled={sessionsPage >= Math.ceil(sessions.length / sessionsPerPage)}
-                    className="p-2 rounded-wonderful-lg bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <StatCard label="Total Candidates" value={stats.totalCandidates} icon={Users} />
+        <StatCard label="Passed" value={stats.passedCandidates} icon={CheckCircle2} variant="success" />
+        <StatCard label="Rejected" value={stats.rejectedCandidates} icon={XCircle} variant="danger" />
+        <StatCard label="Pass Rate" value={`${stats.passRate}%`} icon={TrendingUp} variant="accent" />
+      </div>
 
-        {/* Filters */}
-        <div className="bg-card-light dark:bg-card-dark backdrop-blur-sm rounded-wonderful-xl shadow-wonderful-lg dark:shadow-wonderful-xl border border-white/20 dark:border-gray-800/50 p-6 mb-6">
-          <div className="flex items-center space-x-2 mb-4">
-            <Filter className="w-5 h-5 text-wonderful-purple-600 dark:text-wonderful-purple-400" />
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Filter Candidates</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 uppercase tracking-wide">
-                <div className="flex items-center space-x-1">
-                  <Search className="w-3 h-3" />
-                  <span>Search</span>
-                </div>
-              </label>
-              <input
-                type="text"
-                placeholder="Name, company, title..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-wonderful-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-wonderful-purple-500 transition-all duration-200"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 uppercase tracking-wide">
-                Decision
-              </label>
-              <select
-                value={filterDecision}
-                onChange={(e) => setFilterDecision(e.target.value)}
-                className="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-wonderful-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-wonderful-purple-500 transition-all duration-200"
-              >
-                <option value="ALL">All</option>
-                <option value="PASS">Pass</option>
-                <option value="REJECT">Reject</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 uppercase tracking-wide flex items-center space-x-1">
-                <Calendar className="w-3 h-3" />
-                <span>Date From</span>
-              </label>
-              <input
-                type="date"
-                value={filterDateFrom}
-                onChange={(e) => setFilterDateFrom(e.target.value)}
-                className="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-wonderful-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-wonderful-purple-500 transition-all duration-200"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 uppercase tracking-wide flex items-center space-x-1">
-                <Calendar className="w-3 h-3" />
-                <span>Date To</span>
-              </label>
-              <input
-                type="date"
-                value={filterDateTo}
-                onChange={(e) => setFilterDateTo(e.target.value)}
-                className="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-wonderful-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-wonderful-purple-500 transition-all duration-200"
-              />
-            </div>
-          </div>
-
-          {(filterDecision !== "ALL" || filterDateFrom || filterDateTo || searchQuery) && (
-            <div className="mt-4 flex items-center justify-between">
-              <button
-                onClick={clearFilters}
-                className="text-sm text-wonderful-purple-600 dark:text-wonderful-purple-400 hover:text-wonderful-purple-700 dark:hover:text-wonderful-purple-300 font-semibold transition-colors"
-              >
-                Clear Filters
-              </button>
-              <span className="text-sm text-gray-700 dark:text-gray-300 font-semibold">
-                Showing {filteredCandidates.length} of {candidates.length} candidates
-              </span>
-            </div>
-          )}
+      {/* Filters */}
+      <div className="bg-background-secondary border border-border rounded-md p-4 mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter className="w-4 h-4 text-text-secondary" />
+          <h2 className="text-h3 text-text-primary">Filter Candidates</h2>
         </div>
 
-        {/* Candidates List */}
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Candidates</h2>
-
-          {/* Top Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center space-x-4 mb-6">
-              <button
-                onClick={handlePreviousPage}
-                disabled={currentPage === 1}
-                className="p-2 rounded-wonderful-lg bg-card-light dark:bg-card-dark border border-white/20 dark:border-gray-800/50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                aria-label="Previous page"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 px-4">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={handleNextPage}
-                disabled={currentPage === totalPages}
-                className="p-2 rounded-wonderful-lg bg-card-light dark:bg-card-dark border border-white/20 dark:border-gray-800/50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                aria-label="Next page"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-          )}
-
-          <div className="grid gap-3">
-            {paginatedCandidates.map((candidate) => (
-              <div
-                key={candidate.id}
-                onClick={() => setSelectedCandidate(candidate)}
-                className="bg-card-light dark:bg-card-dark backdrop-blur-sm p-4 rounded-wonderful-lg shadow-wonderful-md dark:shadow-wonderful-lg border border-white/20 dark:border-gray-800/50 hover:shadow-glow-light dark:hover:shadow-glow-dark transition-all duration-300 cursor-pointer flex flex-col md:flex-row justify-between items-start md:items-center gap-3"
-              >
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{candidate.fullName}</h3>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 font-semibold mb-1">
-                    {candidate.currentTitle} at {candidate.currentCompany}
-                  </p>
-                  <div className="flex items-center space-x-3 text-xs text-gray-600 dark:text-gray-400">
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="w-3 h-3" />
-                      <span>{new Date(candidate.evaluatedAt).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-4">
-                  <div className="text-center">
-                    <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold mb-1 uppercase">Score</div>
-                    <div className="text-xl font-bold text-gray-900 dark:text-white">{candidate.overallScore}</div>
-                  </div>
-                  <div className={`px-4 py-2 rounded-wonderful-md font-bold text-sm flex items-center space-x-1.5 ${
-                    candidate.decisionResult === 'PASS'
-                      ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
-                      : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
-                  }`}>
-                    {candidate.decisionResult === 'PASS' ? (
-                      <CheckCircle2 className="w-4 h-4" />
-                    ) : (
-                      <XCircle className="w-4 h-4" />
-                    )}
-                    <span>{candidate.decisionResult}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {paginatedCandidates.length === 0 && filteredCandidates.length > 0 && (
-              <div className="text-center py-16 bg-card-light dark:bg-card-dark backdrop-blur-sm rounded-wonderful-xl border border-white/20 dark:border-gray-800/50">
-                <Users className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-700 dark:text-gray-300 font-medium text-lg">No candidates on this page.</p>
-              </div>
-            )}
-
-            {filteredCandidates.length === 0 && (
-              <div className="text-center py-16 bg-card-light dark:bg-card-dark backdrop-blur-sm rounded-wonderful-xl border border-white/20 dark:border-gray-800/50">
-                <Users className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-700 dark:text-gray-300 font-medium text-lg">
-                  {candidates.length === 0
-                    ? "No candidates found for this country yet."
-                    : "No candidates match your filters."}
-                </p>
-                {candidates.length > 0 && (
-                  <button
-                    onClick={clearFilters}
-                    className="mt-4 text-wonderful-purple-600 dark:text-wonderful-purple-400 hover:text-wonderful-purple-700 dark:hover:text-wonderful-purple-300 font-semibold"
-                  >
-                    Clear filters to see all candidates
-                  </button>
-                )}
-              </div>
-            )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-small text-text-secondary mb-2 flex items-center gap-1">
+              <Search className="w-3 h-3" />
+              Search
+            </label>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Name, title, company..."
+              className="w-full h-9 px-3 bg-background border border-border rounded text-body text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-colors"
+            />
           </div>
 
-          {/* Bottom Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="mt-8">
-              <div className="flex items-center justify-center space-x-4 mb-4">
-                <button
-                  onClick={handlePreviousPage}
-                  disabled={currentPage === 1}
-                  className="p-2 rounded-wonderful-lg bg-card-light dark:bg-card-dark border border-white/20 dark:border-gray-800/50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                  aria-label="Previous page"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 px-4">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  onClick={handleNextPage}
-                  disabled={currentPage === totalPages}
-                  className="p-2 rounded-wonderful-lg bg-card-light dark:bg-card-dark border border-white/20 dark:border-gray-800/50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                  aria-label="Next page"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-                Showing {startIndex + 1} - {Math.min(endIndex, filteredCandidates.length)} of {filteredCandidates.length} candidates
-              </div>
-            </div>
-          )}
+          <div>
+            <label className="block text-small text-text-secondary mb-2">Decision</label>
+            <select
+              value={filterDecision}
+              onChange={(e) => setFilterDecision(e.target.value)}
+              className="w-full h-9 px-3 bg-background border border-border rounded text-body text-text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-colors"
+            >
+              <option value="ALL">All Decisions</option>
+              <option value="PASS">Pass</option>
+              <option value="REJECT">Reject</option>
+              <option value="PENDING">Pending</option>
+            </select>
+          </div>
         </div>
 
-        {/* Candidate Modal */}
-        {selectedCandidate && (
-          <CandidateModal
-            candidate={selectedCandidate}
-            onClose={() => setSelectedCandidate(null)}
-          />
+        {hasActiveFilters && (
+          <div className="mt-4 flex items-center justify-between">
+            <button
+              onClick={clearFilters}
+              className="text-small text-accent hover:text-accent-hover font-medium transition-colors"
+            >
+              Clear Filters
+            </button>
+            <span className="text-small text-text-secondary">
+              Showing {candidates.length} of {pagination?.totalItems || 0} candidates
+            </span>
+          </div>
         )}
       </div>
+
+      {/* Candidates Table */}
+      <div className="bg-background-secondary border border-border rounded-md overflow-hidden">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-background-tertiary border-b border-border">
+              <th className="px-4 py-3 text-left text-small font-medium text-text-secondary uppercase tracking-wide">Candidate</th>
+              <th className="px-4 py-3 text-left text-small font-medium text-text-secondary uppercase tracking-wide hidden md:table-cell">Role</th>
+              <th className="px-4 py-3 text-center text-small font-medium text-text-secondary uppercase tracking-wide">Result</th>
+              <th className="px-4 py-3 text-center text-small font-medium text-text-secondary uppercase tracking-wide">Score</th>
+              <th className="px-4 py-3 text-left text-small font-medium text-text-secondary uppercase tracking-wide hidden lg:table-cell">Reasoning</th>
+            </tr>
+          </thead>
+          <tbody>
+            {candidates.map((candidate) => (
+              <tr
+                key={candidate.id}
+                onClick={() => setSelectedCandidate(candidate)}
+                className="border-b border-border hover:bg-background-tertiary cursor-pointer transition-colors"
+              >
+                <td className="px-4 py-3">
+                  <div className="text-body text-text-primary font-medium">{candidate.fullName}</div>
+                  <div className="text-small text-text-secondary">
+                    {candidate.location || "Unknown location"}
+                  </div>
+                </td>
+                <td className="px-4 py-3 hidden md:table-cell">
+                  <div className="text-body text-text-primary">{candidate.currentTitle || "-"}</div>
+                  <div className="text-small text-text-secondary">{candidate.currentCompany || "-"}</div>
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <Badge
+                    variant={
+                      candidate.decisionResult === 'PASS' ? 'pass' :
+                      candidate.decisionResult === 'REVIEW' ? 'review' :
+                      candidate.decisionResult === 'REJECT' ? 'reject' :
+                      'pending'
+                    }
+                  >
+                    {candidate.decisionResult || 'PENDING'}
+                  </Badge>
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <span className="text-body font-mono font-medium text-text-primary">
+                    {candidate.overallScore || '-'}
+                  </span>
+                </td>
+                <td className="px-4 py-3 hidden lg:table-cell">
+                  <span className="text-small text-text-secondary line-clamp-2">
+                    {candidate.finalDecision?.reasoning || '-'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {candidates.length === 0 && (
+          <div className="text-center py-16">
+            <Users className="w-12 h-12 text-text-tertiary mx-auto mb-3" />
+            <p className="text-body text-text-secondary">
+              {hasActiveFilters ? "No candidates match your filters" : "No candidates found for this country"}
+            </p>
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="mt-2 text-small text-accent hover:text-accent-hover font-medium transition-colors"
+              >
+                Clear filters to see all candidates
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Load More Button */}
+        {pagination && pagination.hasMore && candidates.length > 0 && (
+          <div className="p-4 border-t border-border">
+            <Button
+              variant="secondary"
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="w-full"
+            >
+              {loadingMore ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  Load More ({pagination.totalItems - candidates.length} remaining)
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
+        {/* Pagination Info */}
+        {pagination && candidates.length > 0 && (
+          <div className="px-4 py-3 border-t border-border text-center">
+            <span className="text-small text-text-tertiary">
+              Showing {candidates.length} of {pagination.totalItems} candidates
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Candidate Modal */}
+      {selectedCandidate && (
+        <CandidateModal
+          candidate={selectedCandidate}
+          onClose={() => setSelectedCandidate(null)}
+          onDecisionChange={handleDecisionChange}
+        />
+      )}
     </div>
   );
 }

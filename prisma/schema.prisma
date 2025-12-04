@@ -24,11 +24,9 @@ model ScreeningSession {
   startedAt           DateTime? @map("started_at") @db.Timestamptz
   completedAt         DateTime? @map("completed_at") @db.Timestamptz
   totalProcessingTimeMs BigInt? @map("total_processing_time_ms")
-  countryId           String?  @map("country_id") @db.Uuid
 
   evaluations CandidateEvaluation[]
   errors      SessionError[]
-  country     Country? @relation(fields: [countryId], references: [id])
 
   @@index([createdAt(sort: Desc)])
   @@index([createdBy])
@@ -41,7 +39,6 @@ model Country {
   name      String   @unique @db.VarChar(100)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  sessions   ScreeningSession[]
   candidates CandidateEvaluation[]
 
   @@map("countries")

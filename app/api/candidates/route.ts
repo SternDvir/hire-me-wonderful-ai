@@ -10,18 +10,16 @@ export async function GET(req: NextRequest) {
     const dateTo = searchParams.get("dateTo");
     const decision = searchParams.get("decision"); // PASS, REJECT, PENDING
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
 
     // Filter by session ID if provided
     if (sessionId) {
       where.screeningSessionId = sessionId;
     }
 
-    // Filter by country if provided
+    // Filter by country if provided (now on candidate directly)
     if (countryId) {
-      where.session = {
-        countryId: countryId
-      };
+      where.countryId = countryId;
     }
 
     // Filter by decision result
@@ -31,26 +29,26 @@ export async function GET(req: NextRequest) {
 
     // Filter by date range if provided
     if (dateFrom || dateTo) {
-      where.evaluatedAt = {};
+      const dateFilter: Record<string, Date> = {};
       if (dateFrom) {
-        where.evaluatedAt.gte = new Date(dateFrom);
+        dateFilter.gte = new Date(dateFrom);
       }
       if (dateTo) {
         // Add one day to include the entire end date
         const endDate = new Date(dateTo);
         endDate.setDate(endDate.getDate() + 1);
-        where.evaluatedAt.lt = endDate;
+        dateFilter.lt = endDate;
       }
+      where.evaluatedAt = dateFilter;
     }
 
     const candidates = await prisma.candidateEvaluation.findMany({
       where,
       include: {
+        country: true,
         session: {
           select: {
             id: true,
-            countryId: true,
-            country: true,
             createdAt: true
           }
         }

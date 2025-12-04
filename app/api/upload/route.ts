@@ -36,7 +36,6 @@ export async function POST(req: NextRequest) {
       candidates: ApifyOutputSchema,
       config: ScreeningSessionSchema.shape.config.optional(),
       createdBy: z.string().default("user"), // Placeholder for auth
-      countryId: z.string().nullable().optional(), // Add countryId to the schema
     });
 
     const result = UploadSchema.safeParse(body);
@@ -53,9 +52,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { candidates, config, createdBy, countryId } = result.data; // Extract countryId
+    const { candidates, config, createdBy } = result.data;
 
-    // 2. Create Screening Session
+    // 2. Create Screening Session (no countryId - countries are now candidate-centric)
     const session = await prisma.screeningSession.create({
       data: {
         createdBy,
@@ -73,7 +72,6 @@ export async function POST(req: NextRequest) {
         totalCost: 0,
         tavilyCost: 0,
         aiCost: 0,
-        countryId: countryId || null // Save the countryId if provided
       }
     });
 
@@ -126,7 +124,7 @@ export async function POST(req: NextRequest) {
           overallScore: 0,
           evaluationCost: 0,
           processingTimeMs: 0,
-          countryId: detectedCountryId || countryId || null, // Use detected country, fallback to manually selected
+          countryId: detectedCountryId || null, // Use auto-detected country from candidate location
           inputOrder: index, // Preserve original order
         };
       });

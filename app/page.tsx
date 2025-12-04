@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { CountryManager } from "@/components/CountryManager";
+import { CountryList } from "@/components/CountryList";
 import { RecentScreenings } from "@/components/RecentScreenings";
 import { Users, CheckCircle2, TrendingUp, XCircle, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -128,8 +128,8 @@ export default async function Dashboard() {
           {/* Recent Screenings with CRUD */}
           <RecentScreenings />
 
-          {/* Country Manager */}
-          <CountryManager />
+          {/* Country List */}
+          <CountryList />
         </div>
       </div>
     </div>

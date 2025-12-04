@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApifyOutputSchema } from "@/lib/schemas/linkedin";
-import { prisma } from "@/lib/prisma"; // We need to create this client instance
+import { prisma } from "@/lib/prisma";
 import { ScreeningSessionSchema } from "@/lib/schemas/session";
 import { z } from "zod";
+import { extractCountryFromProfile } from "@/lib/utils/country-detection";
 
 // Recursively sanitize an object to remove null characters that PostgreSQL can't handle
 function sanitizeForPostgres(obj: unknown): unknown {
@@ -78,20 +79,57 @@ export async function POST(req: NextRequest) {
 
     // 3. Store Candidates using createMany for better performance
     try {
-      const candidateData = candidates.map(profile => ({
-        screeningSessionId: session.id,
-        candidateId: profile.linkedinUrl,
-        linkedinUrl: profile.linkedinUrl,
-        fullName: profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim(),
-        currentTitle: profile.jobTitle || "",
-        currentCompany: profile.companyName || "",
-        location: profile.addressCountryOnly || "",
-        profileData: profile as any,
-        decisionResult: "PENDING" as const,
-        overallScore: 0,
-        evaluationCost: 0,
-        processingTimeMs: 0
-      }));
+      // First, collect and upsert all unique countries
+      const countryNames = new Set<string>();
+      for (const profile of candidates) {
+        const country = extractCountryFromProfile({
+          addressCountryOnly: profile.addressCountryOnly,
+          addressWithCountry: profile.addressWithCountry,
+          location: profile.addressCountryOnly || profile.addressWithCountry,
+          jobLocation: profile.jobLocation,
+        });
+        if (country) {
+          countryNames.add(country);
+        }
+      }
+
+      // Create country map
+      const countryMap = new Map<string, string>();
+      for (const name of Array.from(countryNames)) {
+        const country = await prisma.country.upsert({
+          where: { name },
+          create: { name },
+          update: {},
+        });
+        countryMap.set(name, country.id);
+      }
+
+      const candidateData = candidates.map((profile, index) => {
+        const country = extractCountryFromProfile({
+          addressCountryOnly: profile.addressCountryOnly,
+          addressWithCountry: profile.addressWithCountry,
+          location: profile.addressCountryOnly || profile.addressWithCountry,
+          jobLocation: profile.jobLocation,
+        });
+        const detectedCountryId = country ? countryMap.get(country) : null;
+
+        return {
+          screeningSessionId: session.id,
+          candidateId: profile.linkedinUrl,
+          linkedinUrl: profile.linkedinUrl,
+          fullName: profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim(),
+          currentTitle: profile.jobTitle || "",
+          currentCompany: profile.companyName || "",
+          location: profile.addressCountryOnly || "",
+          profileData: profile as any,
+          decisionResult: "PENDING" as const,
+          overallScore: 0,
+          evaluationCost: 0,
+          processingTimeMs: 0,
+          countryId: detectedCountryId || countryId || null, // Use detected country, fallback to manually selected
+          inputOrder: index, // Preserve original order
+        };
+      });
 
       // Use createMany for bulk insert - much faster than individual creates
       await prisma.candidateEvaluation.createMany({
@@ -102,7 +140,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         sessionId: session.id,
-        count: candidates.length
+        count: candidates.length,
+        countriesDetected: Array.from(countryNames) as string[],
       });
     } catch (dbError) {
       console.error("Database error:", dbError);

@@ -41,7 +41,8 @@ model Country {
   name      String   @unique @db.VarChar(100)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  sessions ScreeningSession[]
+  sessions   ScreeningSession[]
+  candidates CandidateEvaluation[]
 
   @@map("countries")
 }
@@ -55,16 +56,16 @@ model CandidateEvaluation {
   currentTitle                String?  @map("current_title") @db.VarChar(255)
   currentCompany              String?  @map("current_company") @db.VarChar(255)
   location                    String?  @db.VarChar(255)
-  
+
   profileData                 Json     @map("profile_data")
   enrichedCompanies           Json?    @map("enriched_companies")
-  
+
   experienceEvaluation        Json?    @map("experience_evaluation")
   leadershipEvaluation        Json?    @map("leadership_evaluation")
   languageCheck               Json?    @map("language_check")
   companyBackgroundEvaluation Json?    @map("company_background_evaluation")
   bonusFactors                Json?    @map("bonus_factors")
-  
+
   finalDecision               Json?    @map("final_decision")
   secondaryEvaluation         Json?    @map("secondary_evaluation") // Deeper analysis for REVIEW cases
   decisionResult              String?  @map("decision_result") @db.VarChar(10) // PENDING, PASS, REJECT
@@ -76,6 +77,13 @@ model CandidateEvaluation {
 
   manualOverride              Json?    @map("manual_override")
 
+  // Auto-detected country from candidate location
+  countryId                   String?  @map("country_id") @db.Uuid
+  country                     Country? @relation(fields: [countryId], references: [id])
+
+  // Preserve original input order
+  inputOrder                  Int?     @map("input_order")
+
   session ScreeningSession @relation(fields: [screeningSessionId], references: [id], onDelete: Cascade)
 
   @@index([screeningSessionId])
@@ -83,6 +91,8 @@ model CandidateEvaluation {
   @@index([overallScore(sort: Desc)])
   @@index([evaluatedAt(sort: Desc)])
   @@index([linkedinUrl])
+  @@index([countryId])
+  @@index([inputOrder])
   @@unique([screeningSessionId, linkedinUrl])
   @@map("candidate_evaluations")
 }

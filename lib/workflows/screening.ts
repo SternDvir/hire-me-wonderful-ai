@@ -99,7 +99,11 @@ export async function processCandidate(
           ...(finalDecision.redFlags || []),
           secondaryEvaluation.builderDNAEvidence.includes("manager") ? "Manager mentality detected in secondary eval" : null,
           secondaryEvaluation.innovationCurrencyAssessment.includes("outdated") ? "Skills not current" : null,
-        ].filter(Boolean) as string[]
+        ].filter(Boolean) as string[],
+        // Add shortRejectReason from secondary evaluation for REJECT decisions
+        ...(secondaryEvaluation.finalDecision === "REJECT" && secondaryEvaluation.shortRejectReason && {
+          shortRejectReason: secondaryEvaluation.shortRejectReason
+        })
       };
 
       console.log(`[${candidateId}] Secondary evaluation result: ${decisionResult} (updated score: ${overallScore})`);

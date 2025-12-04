@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, CheckCircle2, XCircle, ExternalLink, Award, TrendingUp, RefreshCw, AlertTriangle, Copy, Check } from "lucide-react";
+import { X, CheckCircle2, XCircle, ExternalLink, Award, TrendingUp, RefreshCw, AlertTriangle, Copy, Check, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 
@@ -17,6 +17,8 @@ export function CandidateModal({ candidate, onClose, onDecisionChange }: Candida
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [overrideError, setOverrideError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
 
   const handleCopyRejectReason = async () => {
     const reason = candidate.finalDecision?.shortRejectReason;
@@ -27,6 +29,37 @@ export function CandidateModal({ candidate, onClose, onDecisionChange }: Candida
       setTimeout(() => setCopied(false), 2000);
     }
   };
+
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    setRetryError(null);
+
+    try {
+      const res = await fetch(`/api/candidates/${candidate.id}/retry`, {
+        method: "POST"
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Retry failed");
+      }
+
+      const data = await res.json();
+
+      // Notify parent to refresh
+      if (onDecisionChange && data.decision) {
+        onDecisionChange(candidate.id, data.decision);
+      }
+    } catch (err) {
+      setRetryError(err instanceof Error ? err.message : "Retry failed");
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
+  // Check if this candidate had a system error (failed evaluation)
+  const hasEvaluationError = candidate.finalDecision?.reasoning?.includes("AI Evaluation Failed") ||
+    candidate.finalDecision?.concerns?.some((c: string) => c.includes("System error"));
 
   if (!candidate) return null;
 
@@ -302,7 +335,25 @@ export function CandidateModal({ candidate, onClose, onDecisionChange }: Candida
         </div>
 
         {/* Footer - Compact */}
-        <div className="shrink-0 px-5 py-3 border-t border-border flex justify-end">
+        <div className="shrink-0 px-5 py-3 border-t border-border flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            {/* Retry button - shown for failed evaluations */}
+            {hasEvaluationError && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleRetry}
+                disabled={isRetrying}
+                className="flex items-center gap-1.5"
+              >
+                <RotateCcw className={`w-3.5 h-3.5 ${isRetrying ? 'animate-spin' : ''}`} />
+                {isRetrying ? 'Retrying...' : 'Retry Screening'}
+              </Button>
+            )}
+            {retryError && (
+              <span className="text-small text-danger">{retryError}</span>
+            )}
+          </div>
           <a
             href={candidate.linkedinUrl}
             target="_blank"

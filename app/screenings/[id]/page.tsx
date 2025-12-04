@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CandidateModal } from "@/components/CandidateModal";
 import { Badge } from "@/components/ui/Badge";
@@ -16,8 +16,14 @@ import {
   Download,
   Play,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Globe,
+  Building2,
+  Search,
+  ArrowUpDown
 } from "lucide-react";
+
+type SortOption = "score" | "name" | "order" | "company";
 
 function StatCard({
   label,
@@ -67,10 +73,14 @@ export default function SessionPage() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Filter state
   const [filterDecision, setFilterDecision] = useState<string>("ALL");
+  const [filterCountry, setFilterCountry] = useState<string>("ALL");
+  const [filterCompany, setFilterCompany] = useState<string>("ALL");
+  const [filterKeyword, setFilterKeyword] = useState<string>("");
+  const [sortBy, setSortBy] = useState<SortOption>("score");
   const [filterDateFrom, setFilterDateFrom] = useState<string>("");
   const [filterDateTo, setFilterDateTo] = useState<string>("");
-  const [filteredEvaluations, setFilteredEvaluations] = useState<any[]>([]);
 
   const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
 
@@ -90,18 +100,42 @@ export default function SessionPage() {
     }
   }, [id]);
 
-  useEffect(() => {
-    if (!session?.evaluations) {
-      setFilteredEvaluations([]);
-      return;
-    }
+  // Filter and sort evaluations
+  const filteredEvaluations = useMemo(() => {
+    if (!session?.evaluations) return [];
 
     let filtered = [...session.evaluations];
 
+    // Filter by decision
     if (filterDecision !== "ALL") {
       filtered = filtered.filter((e: any) => e.decisionResult === filterDecision);
     }
 
+    // Filter by country
+    if (filterCountry !== "ALL") {
+      filtered = filtered.filter((e: any) => e.country?.id === filterCountry);
+    }
+
+    // Filter by company
+    if (filterCompany !== "ALL") {
+      filtered = filtered.filter((e: any) => e.currentCompany === filterCompany);
+    }
+
+    // Filter by keyword (searches name, title, company, location)
+    if (filterKeyword.trim()) {
+      const keyword = filterKeyword.toLowerCase().trim();
+      filtered = filtered.filter((e: any) => {
+        const searchFields = [
+          e.fullName,
+          e.currentTitle,
+          e.currentCompany,
+          e.location,
+        ].filter(Boolean).map(s => s.toLowerCase());
+        return searchFields.some(field => field.includes(keyword));
+      });
+    }
+
+    // Filter by date
     if (filterDateFrom || filterDateTo) {
       filtered = filtered.filter((e: any) => {
         if (!e.evaluatedAt) return false;
@@ -116,8 +150,28 @@ export default function SessionPage() {
       });
     }
 
-    setFilteredEvaluations(filtered);
-  }, [session, filterDecision, filterDateFrom, filterDateTo]);
+    // Sort
+    filtered.sort((a: any, b: any) => {
+      switch (sortBy) {
+        case "score":
+          return (b.overallScore || 0) - (a.overallScore || 0);
+        case "name":
+          return (a.fullName || "").localeCompare(b.fullName || "");
+        case "company":
+          return (a.currentCompany || "").localeCompare(b.currentCompany || "");
+        case "order":
+          // Sort by inputOrder, nulls last
+          if (a.inputOrder == null && b.inputOrder == null) return 0;
+          if (a.inputOrder == null) return 1;
+          if (b.inputOrder == null) return -1;
+          return a.inputOrder - b.inputOrder;
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [session, filterDecision, filterCountry, filterCompany, filterKeyword, filterDateFrom, filterDateTo, sortBy]);
 
   const deleteCandidate = async (candidateId: string) => {
     if (!confirm("Are you sure you want to delete this candidate?")) return;
@@ -162,6 +216,24 @@ export default function SessionPage() {
     processBatch();
   };
 
+  const clearFilters = () => {
+    setFilterDecision("ALL");
+    setFilterCountry("ALL");
+    setFilterCompany("ALL");
+    setFilterKeyword("");
+    setFilterDateFrom("");
+    setFilterDateTo("");
+    setSortBy("score");
+  };
+
+  const hasActiveFilters = filterDecision !== "ALL" ||
+    filterCountry !== "ALL" ||
+    filterCompany !== "ALL" ||
+    filterKeyword.trim() !== "" ||
+    filterDateFrom !== "" ||
+    filterDateTo !== "" ||
+    sortBy !== "score";
+
   if (error) {
     return (
       <div className="max-w-7xl mx-auto px-6 py-8">
@@ -188,6 +260,8 @@ export default function SessionPage() {
       </div>
     );
   }
+
+  const filterOptions = session.filterOptions || { countries: [], companies: [] };
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
@@ -246,9 +320,11 @@ export default function SessionPage() {
       <div className="bg-background-secondary border border-border rounded-md p-4 mb-6">
         <div className="flex items-center gap-2 mb-4">
           <Filter className="w-4 h-4 text-text-secondary" />
-          <h2 className="text-h3 text-text-primary">Filter Results</h2>
+          <h2 className="text-h3 text-text-primary">Filter & Sort</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        {/* First row: Decision, Country, Company */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           <div>
             <label className="block text-small text-text-secondary mb-2">Decision</label>
             <select
@@ -256,7 +332,7 @@ export default function SessionPage() {
               onChange={(e) => setFilterDecision(e.target.value)}
               className="w-full h-9 px-3 bg-background border border-border rounded text-body text-text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-colors"
             >
-              <option value="ALL">All</option>
+              <option value="ALL">All Decisions</option>
               <option value="PASS">Pass</option>
               <option value="REVIEW">Review</option>
               <option value="REJECT">Reject</option>
@@ -266,8 +342,76 @@ export default function SessionPage() {
 
           <div>
             <label className="block text-small text-text-secondary mb-2 flex items-center gap-1">
+              <Globe className="w-3 h-3" />
+              Country
+            </label>
+            <select
+              value={filterCountry}
+              onChange={(e) => setFilterCountry(e.target.value)}
+              className="w-full h-9 px-3 bg-background border border-border rounded text-body text-text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-colors"
+            >
+              <option value="ALL">All Countries</option>
+              {filterOptions.countries.map((c: any) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-small text-text-secondary mb-2 flex items-center gap-1">
+              <Building2 className="w-3 h-3" />
+              Company
+            </label>
+            <select
+              value={filterCompany}
+              onChange={(e) => setFilterCompany(e.target.value)}
+              className="w-full h-9 px-3 bg-background border border-border rounded text-body text-text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-colors"
+            >
+              <option value="ALL">All Companies</option>
+              {filterOptions.companies.map((company: string) => (
+                <option key={company} value={company}>{company}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-small text-text-secondary mb-2 flex items-center gap-1">
+              <ArrowUpDown className="w-3 h-3" />
+              Sort By
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="w-full h-9 px-3 bg-background border border-border rounded text-body text-text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-colors"
+            >
+              <option value="score">Score (High to Low)</option>
+              <option value="order">Original Order</option>
+              <option value="name">Name (A-Z)</option>
+              <option value="company">Company (A-Z)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Second row: Keyword search and dates */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-small text-text-secondary mb-2 flex items-center gap-1">
+              <Search className="w-3 h-3" />
+              Search
+            </label>
+            <input
+              type="text"
+              value={filterKeyword}
+              onChange={(e) => setFilterKeyword(e.target.value)}
+              placeholder="Name, title, company..."
+              className="w-full h-9 px-3 bg-background border border-border rounded text-body text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-colors"
+            />
+          </div>
+
+          <div>
+            <label className="block text-small text-text-secondary mb-2 flex items-center gap-1">
               <Calendar className="w-3 h-3" />
-              Date From
+              Evaluated From
             </label>
             <input
               type="date"
@@ -280,7 +424,7 @@ export default function SessionPage() {
           <div>
             <label className="block text-small text-text-secondary mb-2 flex items-center gap-1">
               <Calendar className="w-3 h-3" />
-              Date To
+              Evaluated To
             </label>
             <input
               type="date"
@@ -291,17 +435,13 @@ export default function SessionPage() {
           </div>
         </div>
 
-        {(filterDecision !== "ALL" || filterDateFrom || filterDateTo) && (
+        {hasActiveFilters && (
           <div className="mt-4 flex items-center justify-between">
             <button
-              onClick={() => {
-                setFilterDecision("ALL");
-                setFilterDateFrom("");
-                setFilterDateTo("");
-              }}
+              onClick={clearFilters}
               className="text-small text-accent hover:text-accent-hover font-medium transition-colors"
             >
-              Clear Filters
+              Clear All Filters
             </button>
             <span className="text-small text-text-secondary">
               Showing {filteredEvaluations.length} of {session.evaluations?.length || 0} candidates
@@ -332,7 +472,9 @@ export default function SessionPage() {
               >
                 <td className="px-4 py-3">
                   <div className="text-body text-text-primary font-medium">{evaluation.fullName}</div>
-                  <div className="text-small text-text-secondary">{evaluation.location}</div>
+                  <div className="text-small text-text-secondary flex items-center gap-1">
+                    {evaluation.country?.name || evaluation.location || "Unknown location"}
+                  </div>
                 </td>
                 <td className="px-4 py-3 hidden md:table-cell">
                   <div className="text-body text-text-primary">{evaluation.currentTitle}</div>

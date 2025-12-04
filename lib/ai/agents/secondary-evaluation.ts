@@ -18,9 +18,9 @@ function getOpenAIClient() {
 const SECONDARY_EVAL_PROMPT = `
 You are performing a SECONDARY EVALUATION for a borderline candidate who received a REVIEW decision.
 
-═══════════════════════════════════════════════════════════════════════════════
+
 WHY THIS CANDIDATE NEEDS DEEPER EVALUATION
-═══════════════════════════════════════════════════════════════════════════════
+
 
 The initial screening flagged this candidate as REVIEW because:
 {REVIEW_REASON}
@@ -29,9 +29,7 @@ Initial Score: {INITIAL_SCORE}
 Initial Concerns: {INITIAL_CONCERNS}
 Initial Strengths: {INITIAL_STRENGTHS}
 
-═══════════════════════════════════════════════════════════════════════════════
-YOUR TASK: DEEPER INVESTIGATION
-═══════════════════════════════════════════════════════════════════════════════
+YOUR TASK: DEEPER INVESTIGATION:
 
 Perform a thorough second-pass analysis focusing on:
 
@@ -66,9 +64,8 @@ Perform a thorough second-pass analysis focusing on:
    - Sako Arts pattern: AI-native, founder DNA, high charisma/presence
    - Georgios pattern: Technical builder with business acumen, startup DNA
 
-═══════════════════════════════════════════════════════════════════════════════
-DECISION FRAMEWORK
-═══════════════════════════════════════════════════════════════════════════════
+
+DECISION FRAMEWORK:
 
 After deeper analysis, choose ONE of:
 
@@ -87,9 +84,7 @@ REJECT (Downgrade from REVIEW):
 If you're STILL uncertain after this analysis, lean toward REJECT.
 Wonderful AI has high standards - when in doubt, pass on the candidate.
 
-═══════════════════════════════════════════════════════════════════════════════
 OUTPUT FORMAT
-═══════════════════════════════════════════════════════════════════════════════
 
 Output a valid JSON object:
 {
@@ -101,7 +96,8 @@ Output a valid JSON object:
   "overqualificationAssessment": "If applicable, assessment of whether too senior",
   "patternMatch": "Which successful CTO pattern they most resemble (if any)",
   "updatedScore": 0-100,
-  "confidence": 0-100
+  "confidence": 0-100,
+  "shortRejectReason": "5-10 word summary for spreadsheet" (REQUIRED if finalDecision is REJECT, e.g., "Executive drift confirmed, no recent hands-on" or "Legacy tech, no startup DNA")
 }
 
 Be decisive. The purpose of secondary evaluation is to RESOLVE uncertainty, not perpetuate it.
@@ -117,6 +113,7 @@ interface SecondaryEvaluationResult {
   patternMatch: string;
   updatedScore: number;
   confidence: number;
+  shortRejectReason?: string; // Required for REJECT decisions
 }
 
 export async function performSecondaryEvaluation(
